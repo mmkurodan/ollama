@@ -12,6 +12,17 @@ android {
         targetSdk 34
         versionCode 1
         versionName "1.0"
+
+        // JNI / NDK 用
+        ndk {
+            abiFilters "arm64-v8a"
+        }
+
+        externalNativeBuild {
+            cmake {
+                cppFlags "-std=c++17"
+            }
+        }
     }
 
     buildTypes {
@@ -19,7 +30,18 @@ android {
             minifyEnabled false
         }
     }
+
+    // CMakeLists.txt を有効化
+    externalNativeBuild {
+        cmake {
+            path "src/main/cpp/CMakeLists.txt"
+        }
+    }
+
+    // NDK のバージョン固定（再現性のため）
+    ndkVersion "26.1.10909125"
 }
 
 dependencies {
+    // 今は依存なし（必要なら後で追加）
 }
