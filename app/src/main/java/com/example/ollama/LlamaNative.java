@@ -3,12 +3,13 @@ package com.example.ollama;
 public class LlamaNative {
 
     static {
-        System.loadLibrary("llama_jni");
+        // libllama.so をロード（CMake で生成される想定のライブラリ名に合わせる）
+        System.loadLibrary("llama");
     }
 
-    // ① モデル初期化用（今はダミーで OK）
+    // モデル初期化（ここに modelPath が渡る）
     public native String init(String modelPath);
 
-    // ② 推論用（プロンプトを渡してレスポンスをもらう）
+    // テキスト生成（まだダミーでOK）
     public native String generate(String prompt);
 }
