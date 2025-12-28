@@ -22,7 +22,7 @@ jobs:
         with:
           ndk-version: r26b
 
-      - name: Build mbedTLS for arm64
+      - name: Build mbedTLS for arm64 (with -fPIC)
         run: |
           set -e
           export API=24
@@ -46,6 +46,9 @@ jobs:
             -DCMAKE_CXX_COMPILER=$TOOLCHAIN/bin/aarch64-linux-android$API-clang++ \
             -DENABLE_TESTING=OFF \
             -DENABLE_PROGRAMS=OFF \
+            -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+            -DCMAKE_C_FLAGS="-fPIC" \
+            -DCMAKE_CXX_FLAGS="-fPIC" \
             -DCMAKE_INSTALL_PREFIX=$PWD/install
 
           make -j"$(nproc)"
@@ -144,7 +147,7 @@ jobs:
       - name: Build debug APK
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug --stacktrace --info
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
