@@ -1,34 +1,49 @@
-@Override
-protected void onCreate(Bundle savedInstanceState) {
-    super.onCreate(savedInstanceState);
+package com.example.ollama;
 
-    TextView tv = new TextView(this);
-    tv.setText("Starting...");
-    tv.setTextSize(16);
-    setContentView(tv);
+import android.app.Activity;
+import android.os.Bundle;
+import android.widget.TextView;
 
-    new Thread(() -> {
-        String url =
-            "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v0.3-GGUF/resolve/main/"
-            + "tinyllama-1.1b-chat-v0.3.Q4_K_M.gguf";
+public class MainActivity extends Activity {
 
-        String fileName = "tinyllama.gguf";
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
 
-        String modelPath = downloadFileToInternalStorage(url, fileName);
+        TextView tv = new TextView(this);
+        tv.setText("Starting...");
+        tv.setTextSize(16);
+        setContentView(tv);
 
-        String result;
-        if (modelPath == null) {
-            result = "Download failed";
-        } else {
-            LlamaNative llama = new LlamaNative();
-            result = llama.init(modelPath);
-        }
+        new Thread(() -> {
+            String url =
+                "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v0.3-GGUF/resolve/main/"
+                + "tinyllama-1.1b-chat-v0.3.Q4_K_M.gguf";
 
-        String finalResult = result;
+            String fileName = "tinyllama.gguf";
 
-        runOnUiThread(() -> {
-            tv.setText(finalResult);
-        });
+            String modelPath = downloadFileToInternalStorage(url, fileName);
 
-    }).start();
+            String result;
+            if (modelPath == null) {
+                result = "Download failed";
+            } else {
+                LlamaNative llama = new LlamaNative();
+                result = llama.init(modelPath);
+            }
+
+            String finalResult = result;
+
+            runOnUiThread(() -> {
+                tv.setText(finalResult);
+            });
+
+        }).start();
+    }
+
+    // ★ downloadFileToInternalStorage() もクラスの中に入れる必要がある
+    private String downloadFileToInternalStorage(String urlStr, String fileName) {
+        // 光男が前に使っていたダウンロード関数をここに入れる
+        return null; // 仮
+    }
 }
