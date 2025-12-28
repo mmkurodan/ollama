@@ -8,7 +8,7 @@ on:
 
 jobs:
   # ============================
-  # ① OpenSSL (arm64) をビルド
+  # ① OpenSSL (arm64) をビルド（Koreader パッチ版）
   # ============================
   build-openssl:
     runs-on: ubuntu-latest
@@ -19,37 +19,32 @@ jobs:
       - name: Install build deps
         run: |
           sudo apt update
-          sudo apt install -y perl build-essential git
+          sudo apt install -y git build-essential perl
 
       - name: Setup Android NDK
         uses: nttld/setup-ndk@v1
         with:
           ndk-version: r26b
 
-      - name: Build OpenSSL 3.x for arm64
+      - name: Build OpenSSL (patched) for arm64
         run: |
           set -e
           export API=24
-          export HOST_TAG=linux-x86_64
-          export TOOLCHAIN=$ANDROID_NDK/toolchains/llvm/prebuilt/$HOST_TAG
-          export ANDROID_NDK_HOME=$ANDROID_NDK
 
-          git clone https://github.com/openssl/openssl.git
-          cd openssl
-          git checkout openssl-3.3.1
+          git clone https://github.com/koreader/android-ssl.git
+          cd android-ssl
 
-          ./Configure android-arm64 no-shared \
-            --prefix=$PWD/build/arm64 \
-            --cross-compile-prefix=$TOOLCHAIN/bin/aarch64-linux-android-
-
-          make -j"$(nproc)"
-          make install_sw
+          ./build-openssl.sh \
+            --arch=arm64 \
+            --api=$API \
+            --ndk=$ANDROID_NDK \
+            --prefix=$PWD/build/arm64
 
       - name: Upload OpenSSL artifact
         uses: actions/upload-artifact@v4
         with:
           name: openssl-arm64
-          path: openssl/build/arm64
+          path: android-ssl/build/arm64
 
   # ============================
   # ② libcurl (arm64) をビルド
