@@ -19,26 +19,27 @@ jobs:
       - name: Install build deps
         run: |
           sudo apt update
-          sudo apt install -y autoconf automake libtool pkg-config build-essential git
+          sudo apt install -y perl build-essential git
 
       - name: Setup Android NDK
         uses: nttld/setup-ndk@v1
         with:
           ndk-version: r26b
 
-      - name: Build OpenSSL for arm64
+      - name: Build OpenSSL 3.x for arm64
         run: |
           set -e
           export API=24
           export HOST_TAG=linux-x86_64
           export TOOLCHAIN=$ANDROID_NDK/toolchains/llvm/prebuilt/$HOST_TAG
-          export CC=$TOOLCHAIN/bin/aarch64-linux-android${API}-clang
+          export ANDROID_NDK_HOME=$ANDROID_NDK
 
           git clone https://github.com/openssl/openssl.git
           cd openssl
-          git checkout OpenSSL_1_1_1w
+          git checkout openssl-3.3.1
 
-          ./Configure android-arm64 no-shared no-unit-test no-ui --prefix=$PWD/build/arm64
+          ./Configure android-arm64 no-shared --prefix=$PWD/build/arm64
+
           make -j"$(nproc)"
           make install_sw
 
