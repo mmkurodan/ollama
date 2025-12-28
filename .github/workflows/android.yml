@@ -120,13 +120,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: "Debug: show workspace structure"
-        run: |
-          echo "=== WORKSPACE ==="
-          ls -al $GITHUB_WORKSPACE
-          echo "=== RECURSIVE ==="
-          ls -R $GITHUB_WORKSPACE
-
       - name: Download mbedTLS artifact
         uses: actions/download-artifact@v4
         with:
@@ -139,8 +132,22 @@ jobs:
           name: libcurl-arm64
           path: app/src/main/cpp/third_party/libcurl
 
+      - name: Download Gradle 8.2.1
+        run: |
+          wget https://services.gradle.org/distributions/gradle-8.2.1-bin.zip
+          unzip gradle-8.2.1-bin.zip
+          echo "$PWD/gradle-8.2.1/bin" >> $GITHUB_PATH
+
+      - name: Generate Gradle Wrapper (8.2.1)
+        run: gradle wrapper --gradle-version 8.2.1
+
       - name: Build debug APK
         run: |
-          cd $GITHUB_WORKSPACE/app
           chmod +x gradlew
           ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
