@@ -3,6 +3,9 @@ project(llama_android)
 
 set(CMAKE_CXX_STANDARD 17)
 
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -fPIC")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fPIC -std=c++17")
+
 add_subdirectory(llama)
 
 add_library(
@@ -22,4 +25,8 @@ target_link_libraries(
     PRIVATE
     llama
     log
+    android
+    jnigraphics
+    m
+    atomic
 )
