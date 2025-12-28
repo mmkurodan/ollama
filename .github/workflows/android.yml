@@ -123,7 +123,7 @@ jobs:
           path: curl/build/arm64
 
   # ============================
-  # ③ APK ビルド
+  # ③ APK ビルド（libcurl + mbedTLS を取り込む）
   # ============================
   build-apk:
     runs-on: ubuntu-latest
@@ -131,6 +131,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      # デバッグ用：ワークスペースの構造を表示
+      - name: Debug: show workspace structure
+        run: |
+          echo "=== WORKSPACE ==="
+          ls -al $GITHUB_WORKSPACE
+          echo "=== RECURSIVE ==="
+          ls -R $GITHUB_WORKSPACE
 
       - name: Download mbedTLS artifact
         uses: actions/download-artifact@v4
@@ -145,4 +153,7 @@ jobs:
           path: app/src/main/cpp/third_party/libcurl
 
       - name: Build debug APK
-        run: ./gradlew assembleDebug
+        run: |
+          cd $GITHUB_WORKSPACE
+          chmod +x gradlew
+          ./gradlew assembleDebug
