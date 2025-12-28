@@ -8,60 +8,70 @@ on:
 
 jobs:
   # ============================
-  # ① OpenSSL (arm64) をビルド（公式 Configure）
+  # ① mbedTLS (arm64) をビルド
   # ============================
-  build-openssl:
+  build-mbedtls:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install build deps
+      - name: Install deps
         run: |
           sudo apt update
-          sudo apt install -y perl build-essential git
+          sudo apt install -y cmake git build-essential
 
       - name: Setup Android NDK
         uses: nttld/setup-ndk@v1
         with:
           ndk-version: r26b
 
-      - name: Build OpenSSL 3.3.1 for arm64
+      - name: Build mbedTLS for arm64
         run: |
           set -e
           export API=24
           export HOST_TAG=linux-x86_64
           export TOOLCHAIN=$ANDROID_NDK/toolchains/llvm/prebuilt/$HOST_TAG
-          export ANDROID_NDK_HOME=$ANDROID_NDK
 
-          git clone https://github.com/openssl/openssl.git
-          cd openssl
-          git checkout openssl-3.3.1
+          git clone https://github.com/Mbed-TLS/mbedtls.git
+          cd mbedtls
+          git checkout v3.5.1
 
-          perl Configure android-arm64 no-shared \
-            --prefix=$PWD/build/arm64 \
-            --cross-compile-prefix=$TOOLCHAIN/bin/aarch64-linux-android-
+          mkdir build
+          cd build
+
+          cmake .. \
+            -DCMAKE_SYSTEM_NAME=Android \
+            -DCMAKE_SYSTEM_VERSION=$API \
+            -DCMAKE_ANDROID_ARCH_ABI=arm64-v8a \
+            -DCMAKE_ANDROID_NDK=$ANDROID_NDK \
+            -DCMAKE_ANDROID_STL_TYPE=c++_static \
+            -DCMAKE_C_COMPILER=$TOOLCHAIN/bin/aarch64-linux-android$API-clang \
+            -DCMAKE_CXX_COMPILER=$TOOLCHAIN/bin/aarch64-linux-android$API-clang++ \
+            -DENABLE_TESTING=OFF \
+            -DENABLE_PROGRAMS=OFF \
+            -DCMAKE_INSTALL_PREFIX=$PWD/install
 
           make -j"$(nproc)"
-          make install_sw
+          make install
 
-      - name: Upload OpenSSL artifact
+      - name: Upload mbedTLS artifact
         uses: actions/upload-artifact@v4
         with:
-          name: openssl-arm64
-          path: openssl/build/arm64
+          name: mbedtls-arm64
+          path: mbedtls/build/install
 
   # ============================
-  # ② libcurl (arm64) をビルド
+  # ② libcurl (arm64) をビルド（mbedTLS 版）
   # ============================
   build-libcurl:
     runs-on: ubuntu-latest
-    needs: build-openssl
+    needs: build-mbedtls
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install build deps
+      - name: Install deps
         run: |
           sudo apt update
           sudo apt install -y autoconf automake libtool pkg-config build-essential git
@@ -71,13 +81,13 @@ jobs:
         with:
           ndk-version: r26b
 
-      - name: Download OpenSSL artifact
+      - name: Download mbedTLS artifact
         uses: actions/download-artifact@v4
         with:
-          name: openssl-arm64
-          path: openssl-arm64
+          name: mbedtls-arm64
+          path: mbedtls-arm64
 
-      - name: Build libcurl for arm64
+      - name: Build libcurl for arm64 (mbedTLS)
         run: |
           set -e
           git clone https://github.com/curl/curl.git
@@ -96,7 +106,7 @@ jobs:
 
           ./configure \
             --host=aarch64-linux-android \
-            --with-ssl=$GITHUB_WORKSPACE/openssl-arm64 \
+            --with-mbedtls=$GITHUB_WORKSPACE/mbedtls-arm64 \
             --disable-shared \
             --enable-static \
             --without-zstd \
@@ -113,7 +123,7 @@ jobs:
           path: curl/build/arm64
 
   # ============================
-  # ③ APK ビルド（libcurl + OpenSSL を取り込む）
+  # ③ APK ビルド
   # ============================
   build-apk:
     runs-on: ubuntu-latest
@@ -122,11 +132,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download OpenSSL artifact
+      - name: Download mbedTLS artifact
         uses: actions/download-artifact@v4
         with:
-          name: openssl-arm64
-          path: app/src/main/cpp/third_party/openssl
+          name: mbedtls-arm64
+          path: app/src/main/cpp/third_party/mbedtls
 
       - name: Download libcurl artifact
         uses: actions/download-artifact@v4
