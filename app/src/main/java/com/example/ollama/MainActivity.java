@@ -53,6 +53,16 @@ public class MainActivity extends Activity {
             }
         };
 
+        // Set log path for JNI logging (use app-specific external files dir -> no runtime storage permission required)
+        File logFile = new File(getExternalFilesDir(null), "ollama.log");
+        final String logPath = logFile.getAbsolutePath();
+        try {
+            llama.setLogPath(logPath);
+            appendMessage("Set JNI log path: " + logPath);
+        } catch (Throwable t) {
+            appendMessage("Failed to call setLogPath(): " + t.getMessage());
+        }
+
         // Start download+init+generate sequence in background (no pre-init)
         new Thread(() -> {
             try {
@@ -109,42 +119,28 @@ public class MainActivity extends Activity {
             } catch (Throwable t) {
                 appendException("generate() threw", t);
                 showToast("Generate error: " + t.getMessage());
-                return;
             }
-
-            appendMessage("All done.");
-
         }).start();
     }
 
-    // Utility: append a message to the TextView (on UI thread) and auto-scroll
     private void appendMessage(final String msg) {
-        Log.d(TAG, msg);
         runOnUiThread(() -> {
             tv.append(msg + "\n");
-            // auto-scroll to bottom
             scrollView.post(() -> scrollView.fullScroll(ScrollView.FOCUS_DOWN));
         });
     }
 
-    // Utility: display exception stacktrace on screen and logcat
     private void appendException(final String prefix, final Throwable t) {
-        Log.e(TAG, prefix, t);
-        final StringWriter sw = new StringWriter();
+        StringWriter sw = new StringWriter();
         t.printStackTrace(new PrintWriter(sw));
-        final String stack = sw.toString();
-        runOnUiThread(() -> {
-            tv.append(prefix + ": " + t + "\n");
-            tv.append(stack + "\n");
-            scrollView.post(() -> scrollView.fullScroll(ScrollView.FOCUS_DOWN));
-        });
+        appendMessage(prefix + ": " + t.getMessage());
+        appendMessage(sw.toString());
     }
 
-    // Utility: show a short Toast on UI thread
-    private void showToast(final String message) {
+    private void showToast(final String msg) {
         runOnUiThread(() -> {
-            Toast toast = Toast.makeText(MainActivity.this, message, Toast.LENGTH_LONG);
-            toast.setGravity(Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL, 0, dpToPx(64));
+            Toast toast = Toast.makeText(MainActivity.this, msg, Toast.LENGTH_LONG);
+            toast.setGravity(Gravity.CENTER, 0, 0);
             toast.show();
         });
     }
