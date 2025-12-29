@@ -1,5 +1,5 @@
-set(TARGET llama-batched)
+set(TARGET batched)
 add_executable(${TARGET} batched.cpp)
 install(TARGETS ${TARGET} RUNTIME)
 target_link_libraries(${TARGET} PRIVATE common llama ${CMAKE_THREAD_LIBS_INIT})
-target_compile_features(${TARGET} PRIVATE cxx_std_17)
+target_compile_features(${TARGET} PRIVATE cxx_std_11)
