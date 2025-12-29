@@ -64,4 +64,15 @@ public class LlamaNative {
             }
         });
     }
+
+    /**
+     * Java wrapper for downloading a model.
+     * Constructs URL and destination path, then calls the native download function.
+     */
+    public static int downloadModel(String modelName) {
+        // Construct URL and destination as needed by your app
+        String url = modelName; // Replace with actual URL construction if needed
+        String dest = "/data/local/tmp/" + modelName; // Replace with app-writable path
+        return cLlamaDownloadModel(url, dest);
+    }
 }
