@@ -12,10 +12,11 @@
 #include "llama.h"
 #include <curl/curl.h>
 
-// ---------------- OK グローバル ----------------
+// ---------------- グローバル ----------------
 static std::mutex g_mutex;
 static llama_model   *g_model = nullptr;
 static llama_context *g_ctx   = nullptr;
+static JavaVM *g_jvm = nullptr;
 
 // 設定
 static int   g_n_ctx      = 512;
@@ -46,6 +47,49 @@ static size_t write_data(void* ptr, size_t size, size_t nmemb, void* userdata) {
     return size * nmemb;
 }
 
+struct ProgressData {
+    jobject thiz_global;
+    jmethodID onProgressMethod;
+    int last_percent;
+};
+
+// curl transfer progress callback (libcurl >= 7.32.0 uses xferinfo)
+// signature: int func(void *clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow)
+static int xferinfo(void* p, curl_off_t dltotal, curl_off_t dlnow, curl_off_t /*ultotal*/, curl_off_t /*ulnow*/) {
+    ProgressData* pd = reinterpret_cast<ProgressData*>(p);
+    if (!pd) return 0;
+    if (dltotal <= 0) return 0;
+
+    int percent = (int)((dlnow * 100) / dltotal);
+    if (percent == pd->last_percent) return 0;
+    pd->last_percent = percent;
+
+    // Obtain JNIEnv for this thread
+    if (!g_jvm) return 0;
+
+    JNIEnv* env = nullptr;
+    bool attached = false;
+    if (g_jvm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK) {
+        if (g_jvm->AttachCurrentThread(&env, nullptr) != JNI_OK) {
+            return 0;
+        }
+        attached = true;
+    }
+
+    if (env && pd->thiz_global && pd->onProgressMethod) {
+        env->CallVoidMethod(pd->thiz_global, pd->onProgressMethod, (jint)percent);
+        if (env->ExceptionCheck()) {
+            env->ExceptionClear();
+        }
+    }
+
+    if (attached) {
+        g_jvm->DetachCurrentThread();
+    }
+
+    return 0;
+}
+
 // ---------------- 解放 ----------------
 static void llama_jni_free() {
     std::lock_guard<std::mutex> lock(g_mutex);
@@ -70,7 +114,7 @@ extern "C"
 JNIEXPORT jstring JNICALL
 Java_com_example_ollama_LlamaNative_download(
         JNIEnv* env,
-        jobject /*thiz*/,
+        jobject thiz,
         jstring jurl,
         jstring jpath) {
 
@@ -98,13 +142,31 @@ Java_com_example_ollama_LlamaNative_download(
         return env->NewStringUTF("file open failed");
     }
 
+    // Prepare progress callback data
+    ProgressData pd;
+    pd.last_percent = -1;
+    pd.thiz_global = env->NewGlobalRef(thiz);
+    pd.onProgressMethod = nullptr;
+
+    // Try to get method ID for onDownloadProgress(int)
+    jclass cls = env->GetObjectClass(thiz);
+    if (cls) {
+        pd.onProgressMethod = env->GetMethodID(cls, "onDownloadProgress", "(I)V");
+        // cls is a local ref and will be released by JVM automatically when returning
+    }
+
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &ofs);
 
+    // Enable progress callbacks (use xferinfo if available)
+    curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, xferinfo);
+    curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &pd);
+    curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
+
     // ----------------------------------------------------
-    // huggingface.co のときだけ SSL 検証を無効化
+    // huggingface.co のときだけ SSL 検証を無効化
     // ----------------------------------------------------
     std::string surl(url);
 
@@ -125,6 +187,10 @@ Java_com_example_ollama_LlamaNative_download(
     curl_easy_cleanup(curl);
     ofs.close();
 
+    if (pd.thiz_global) {
+        env->DeleteGlobalRef(pd.thiz_global);
+    }
+
     if (res != CURLE_OK) {
         return env->NewStringUTF("curl download failed");
     }
@@ -144,6 +210,11 @@ Java_com_example_ollama_LlamaNative_init(
     llama_jni_free();
 
     std::string model_path = jstring_to_std(env, jModelPath);
+
+    // store JavaVM for progress callback threads
+    if (env->GetJavaVM(&g_jvm) != JNI_OK) {
+        g_jvm = nullptr;
+    }
 
     // llama_backend_init requires a bool numa parameter in this header
     llama_backend_init(false);
