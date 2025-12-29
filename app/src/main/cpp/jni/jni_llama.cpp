@@ -7,6 +7,8 @@
 #include <ctime>
 #include <sstream>
 #include <iomanip>
+#include <cerrno>
+#include <cstring>
 
 #include <android/log.h>
 #define LOG_TAG "LLAMA_JNI"
@@ -134,7 +136,7 @@ static int xferinfo(void* p, curl_off_t dltotal, curl_off_t dlnow, curl_off_t /*
 static void llama_jni_free() {
     std::lock_guard<std::mutex> lock(g_mutex);
 
-    log_to_file("llama_jni_free: freeing resources");
+    log_to_file("llama_jni_free: freeing resources (explicit)");
 
     if (g_ctx) {
         // free context
@@ -154,12 +156,12 @@ static void llama_jni_free() {
     log_to_file("Backend freed");
 
     // close log file if open
-    std::lock_guard<std::mutex> llog(g_log_mutex);
+n    std::lock_guard<std::mutex> llog(g_log_mutex);
     if (g_log_ofs.is_open()) {
         g_log_ofs << current_time_str() << " [JNI] Log closed" << std::endl;
         g_log_ofs.close();
     }
-    g_log_path.clear();
+    // Note: we keep g_log_path so setLogPath can re-open if needed
 }
 
 // ---------------- JNI: setLogPath ----------------
@@ -307,7 +309,8 @@ Java_com_example_ollama_LlamaNative_init(
 
     log_to_file("init: start");
 
-    llama_jni_free();
+    // Do NOT automatically free existing resources here.
+    // The user requested that llama_jni_free be run only when explicitly called.
 
     std::string model_path = jstring_to_std(env, jModelPath);
 
@@ -315,6 +318,23 @@ Java_com_example_ollama_LlamaNative_init(
         std::ostringstream ss;
         ss << "init: model_path=" << model_path;
         log_to_file(ss.str());
+    }
+
+    // --- model file existence + size check ---
+    {
+        std::ifstream ifs(model_path, std::ios::binary | std::ios::ate);
+        if (!ifs) {
+            std::ostringstream ss;
+            ss << "init: model file cannot be opened: " << model_path << " errno=" << errno << " strerror=" << std::strerror(errno);
+            log_to_file(ss.str());
+            return env->NewStringUTF("model file open failed");
+        } else {
+            auto sz = ifs.tellg();
+            std::ostringstream ss;
+            ss << "init: model file exists, size=" << sz << " bytes";
+            log_to_file(ss.str());
+            ifs.close();
+        }
     }
 
     // store JavaVM for progress callback threads
@@ -330,13 +350,25 @@ Java_com_example_ollama_LlamaNative_init(
     log_to_file("init: backend init");
 
     llama_model_params mparams = llama_model_default_params();
-    // Note: function name in this header is llama_load_model_from_file
-    g_model = llama_load_model_from_file(model_path.c_str(), mparams);
-    if (!g_model) {
-        log_to_file("init: failed to load model");
-        return env->NewStringUTF("failed to load model");
+
+    // time the model load
+    {
+        using namespace std::chrono;
+        auto t0 = high_resolution_clock::now();
+        g_model = llama_load_model_from_file(model_path.c_str(), mparams);
+        auto t1 = high_resolution_clock::now();
+        auto ms = duration_cast<milliseconds>(t1 - t0).count();
+
+        std::ostringstream ss;
+        if (!g_model) {
+            ss << "init: failed to load model (returned null) after " << ms << " ms. path_len=" << model_path.size();
+            log_to_file(ss.str());
+            return env->NewStringUTF("failed to load model");
+        } else {
+            ss << "init: model loaded successfully in " << ms << " ms";
+            log_to_file(ss.str());
+        }
     }
-    log_to_file("init: model loaded");
 
     llama_context_params cparams = llama_context_default_params();
     cparams.n_ctx           = g_n_ctx;
@@ -344,12 +376,24 @@ Java_com_example_ollama_LlamaNative_init(
     cparams.n_batch         = g_n_batch;
     cparams.n_threads_batch = g_n_threads;
 
-    // create context with model (API present in this header)
-    g_ctx = llama_new_context_with_model(g_model, cparams);
-    if (!g_ctx) {
-        llama_jni_free();
-        log_to_file("init: failed to create context");
-        return env->NewStringUTF("failed to create context");
+    // create context with model (time it as well)
+    {
+        using namespace std::chrono;
+        auto t0 = high_resolution_clock::now();
+        g_ctx = llama_new_context_with_model(g_model, cparams);
+        auto t1 = high_resolution_clock::now();
+        auto ms = duration_cast<milliseconds>(t1 - t0).count();
+
+        std::ostringstream ss;
+        if (!g_ctx) {
+            ss << "init: failed to create context (returned null) after " << ms << " ms";
+            log_to_file(ss.str());
+            // Do not free g_model here; explicit free only as requested.
+            return env->NewStringUTF("failed to create context");
+        } else {
+            ss << "init: context created successfully in " << ms << " ms";
+            log_to_file(ss.str());
+        }
     }
 
     // set RNG seed if desired
