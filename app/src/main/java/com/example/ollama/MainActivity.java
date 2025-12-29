@@ -1,64 +1,119 @@
 package com.example.ollama;
 
-import android.app.Activity;
+import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.Log;
 import android.widget.TextView;
+import android.widget.Toast;
 
-import java.io.File;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 
-public class MainActivity extends Activity {
+public class MainActivity extends AppCompatActivity {
+    private static final String TAG = "MainActivity";
 
-    private TextView tv;
+    private TextView runtimeTextView;
+    private Handler mainHandler;
+    private LlamaNative llama;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
 
-        tv = new TextView(this);
-        tv.setText("Starting...");
-        tv.setTextSize(16);
-        setContentView(tv);
+        runtimeTextView = findViewById(R.id.runtimeTextView);
+        mainHandler = new Handler(Looper.getMainLooper());
 
-        new Thread(() -> {
-            String url =
-                "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v0.3-GGUF/resolve/main/"
-                + "tinyllama-1.1b-chat-v0.3.Q4_K_M.gguf";
+        appendMessage("Activity created");
 
-            File dir = getFilesDir();
-            File modelFile = new File(dir, "tinyllama.gguf");
-            String modelPath = modelFile.getAbsolutePath();
-
-            // Use a subclass so we can receive onDownloadProgress callbacks
-            LlamaNative llama = new LlamaNative() {
-                @Override
-                public void onDownloadProgress(final int percent) {
-                    runOnUiThread(() -> tv.setText("Download progress: " + percent + "%"));
-                }
-            };
-
-            // Call init("") to register JavaVM in native code (native init stores JavaVM).
-            // The return value will be ignored here because model isn't available yet.
-            llama.init("");
-
-            runOnUiThread(() -> tv.setText("Starting download..."));
-
-            String dlResult = llama.download(url, modelPath);
-
-            String result;
-            if (!"ok".equals(dlResult)) {
-                result = "Download failed: " + dlResult;
-            } else {
-                // After download, initialize with actual model path to load the model
-                result = llama.init(modelPath);
-
-                // 推論テスト
-                String gen = llama.generate("Hello!");
-                result = result + "\n\nGenerated:\n" + gen;
+        // Create an anonymous subclass of LlamaNative to receive progress callbacks
+        llama = new LlamaNative() {
+            @Override
+            public void onDownloadProgress(long downloaded, long total) {
+                String progress = String.format("Download progress: %d / %d", downloaded, total);
+                appendMessage(progress);
             }
 
-            String finalResult = result;
-            runOnUiThread(() -> tv.setText(finalResult));
+            @Override
+            public void onError(Exception e) {
+                String err = "LlamaNative error: " + (e == null ? "unknown" : e.getMessage());
+                appendMessage(err);
+                showToast(err);
+                if (e != null) appendException(e);
+            }
+        };
 
+        // Call preInit on the UI thread
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                appendMessage("Calling preInit on UI thread...");
+                try {
+                    llama.preInit();
+                    appendMessage("preInit completed.");
+                } catch (final Exception e) {
+                    appendMessage("preInit threw an exception");
+                    appendException(e);
+                    showToast("preInit failed: " + e.getMessage());
+                }
+            }
+        });
+
+        // Run the download in a background thread to avoid blocking the UI
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                appendMessage("Starting download in background thread...");
+                try {
+                    // Replace "model-name" with the actual model identifier as needed.
+                    // The exact download method name may vary depending on LlamaNative API.
+                    // Common names: downloadModel(...), download(...). Adjust if necessary.
+                    llama.downloadModel("model-name");
+                    appendMessage("Download completed successfully.");
+                } catch (final Exception e) {
+                    appendMessage("Download failed with exception");
+                    appendException(e);
+                    // Show a toast for errors on the UI thread
+                    mainHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            showToast("Download failed: " + e.getMessage());
+                        }
+                    });
+                }
+            }
         }).start();
+    }
+
+    private void appendMessage(final String message) {
+        Log.d(TAG, message);
+        if (mainHandler == null) {
+            mainHandler = new Handler(Looper.getMainLooper());
+        }
+        mainHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (runtimeTextView != null) {
+                    runtimeTextView.append(message + "\n");
+                }
+            }
+        });
+    }
+
+    private void appendException(Exception e) {
+        StringWriter sw = new StringWriter();
+        e.printStackTrace(new PrintWriter(sw));
+        appendMessage(sw.toString());
+    }
+
+    private void showToast(final String msg) {
+        mainHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(MainActivity.this, msg, Toast.LENGTH_LONG).show();
+            }
+        });
     }
 }
