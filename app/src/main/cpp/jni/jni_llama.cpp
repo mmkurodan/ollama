@@ -256,3 +256,19 @@ Java_com_example_ollama_LlamaNative_generate(
 
         // feed token into model for next step
         if (llama_eval(g_ctx, &id, 1, n_past) != 0) {
+            return env->NewStringUTF("eval failed (generation)");
+        }
+        ++n_past;
+    }
+
+    return env->NewStringUTF(output.c_str());
+}
+
+// ---------------- JNI: free ----------------
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_example_ollama_LlamaNative_free(
+        JNIEnv *env, jobject /*thiz*/
+) {
+    llama_jni_free();
+}
