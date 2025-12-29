@@ -15,6 +15,7 @@ if (CUDAToolkit_FOUND)
         # 80     == Ampere, asynchronous data loading, faster tensor core instructions
         # 86     == RTX 3000, needs CUDA v11.1
         # 89     == RTX 4000, needs CUDA v11.8
+        # 120    == Blackwell, needs CUDA v12.8, FP4 tensor cores
         #
         # XX-virtual == compile CUDA code as PTX, do JIT compilation to binary code on first run
         # XX-real    == compile CUDA code as device code for this specific architecture
@@ -24,17 +25,15 @@ if (CUDAToolkit_FOUND)
         #     for best performance and to also build real architectures for the most commonly used GPUs.
         if (GGML_NATIVE AND CUDAToolkit_VERSION VERSION_GREATER_EQUAL "11.6" AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.24")
             set(CMAKE_CUDA_ARCHITECTURES "native")
-        elseif(GGML_CUDA_F16 OR GGML_CUDA_DMMV_F16)
-            if (CUDAToolkit_VERSION VERSION_GREATER_EQUAL "11.8")
-                set(CMAKE_CUDA_ARCHITECTURES "60-virtual;61-virtual;70-virtual;75-virtual;80-virtual;86-real;89-real")
-            else()
-                set(CMAKE_CUDA_ARCHITECTURES "60-virtual;61-virtual;70-virtual;75-virtual;80-virtual;86-real")
-            endif()
         else()
+            if (CUDAToolkit_VERSION VERSION_LESS "13")
+                list(APPEND CMAKE_CUDA_ARCHITECTURES 50-virtual 61-virtual 70-virtual)
+            endif ()
+
+            list(APPEND CMAKE_CUDA_ARCHITECTURES 75-virtual 80-virtual 86-real)
+
             if (CUDAToolkit_VERSION VERSION_GREATER_EQUAL "11.8")
-                set(CMAKE_CUDA_ARCHITECTURES "50-virtual;61-virtual;70-virtual;75-virtual;80-virtual;86-real;89-real")
-            else()
-                set(CMAKE_CUDA_ARCHITECTURES "50-virtual;61-virtual;70-virtual;75-virtual;80-virtual;86-real")
+                list(APPEND CMAKE_CUDA_ARCHITECTURES 89-real)
             endif()
         endif()
     endif()
@@ -42,13 +41,43 @@ if (CUDAToolkit_FOUND)
 
     enable_language(CUDA)
 
+    # Replace any 12x-real architectures with 12x{a}-real. FP4 ptx instructions are not available in just 12x
+    if (GGML_NATIVE)
+        set(PROCESSED_ARCHITECTURES "")
+        if (CMAKE_CUDA_ARCHITECTURES_NATIVE)
+            set(ARCH_LIST ${CMAKE_CUDA_ARCHITECTURES_NATIVE})
+        else()
+            set(ARCH_LIST ${CMAKE_CUDA_ARCHITECTURES})
+        endif()
+        foreach(ARCH ${ARCH_LIST})
+            if (ARCH MATCHES "^12[0-9](-real|-virtual)?$")
+                string(REGEX REPLACE "^(12[0-9]).*$" "\\1" BASE_ARCH ${ARCH})
+                message(STATUS "Replacing ${ARCH} with ${BASE_ARCH}a-real")
+                list(APPEND PROCESSED_ARCHITECTURES "${BASE_ARCH}a-real")
+            else()
+                list(APPEND PROCESSED_ARCHITECTURES ${ARCH})
+            endif()
+        endforeach()
+        set(CMAKE_CUDA_ARCHITECTURES ${PROCESSED_ARCHITECTURES})
+    else()
+        foreach(ARCH ${CMAKE_CUDA_ARCHITECTURES})
+            if(ARCH MATCHES "^12[0-9](-real|-virtual)?$")
+                message(FATAL_ERROR "Compute capability ${ARCH} used, use ${ARCH}a or ${ARCH}f for Blackwell specific optimizations")
+            endif()
+        endforeach()
+    endif()
+
     file(GLOB   GGML_HEADERS_CUDA "*.cuh")
     list(APPEND GGML_HEADERS_CUDA "../../include/ggml-cuda.h")
 
     file(GLOB   GGML_SOURCES_CUDA "*.cu")
+    file(GLOB   SRCS "template-instances/fattn-tile*.cu")
+    list(APPEND GGML_SOURCES_CUDA ${SRCS})
     file(GLOB   SRCS "template-instances/fattn-mma*.cu")
     list(APPEND GGML_SOURCES_CUDA ${SRCS})
     file(GLOB   SRCS "template-instances/mmq*.cu")
+    list(APPEND GGML_SOURCES_CUDA ${SRCS})
+    file(GLOB   SRCS "template-instances/mmf*.cu")
     list(APPEND GGML_SOURCES_CUDA ${SRCS})
 
     if (GGML_CUDA_FA_ALL_QUANTS)
@@ -91,10 +120,6 @@ if (CUDAToolkit_FOUND)
         add_compile_definitions(GGML_CUDA_NO_FA)
     endif()
 
-    if (GGML_CUDA_F16 OR GGML_CUDA_DMMV_F16)
-        add_compile_definitions(GGML_CUDA_F16)
-    endif()
-
     if (GGML_CUDA_NO_PEER_COPY)
         add_compile_definitions(GGML_CUDA_NO_PEER_COPY)
     endif()
@@ -102,12 +127,16 @@ if (CUDAToolkit_FOUND)
     if (GGML_STATIC)
         if (WIN32)
             # As of 12.3.1 CUDA Toolkit for Windows does not offer a static cublas library
-            target_link_libraries(ggml-cuda PRIVATE CUDA::cudart_static CUDA::cublas CUDA::cublasLt)
+            target_link_libraries(ggml-cuda PRIVATE CUDA::cudart_static CUDA::cublas)
         else ()
-            target_link_libraries(ggml-cuda PRIVATE  CUDA::cudart_static CUDA::cublas_static CUDA::cublasLt_static)
+            if (CUDAToolkit_VERSION VERSION_GREATER_EQUAL "10.1")
+                target_link_libraries(ggml-cuda PRIVATE  CUDA::cudart_static CUDA::cublas_static CUDA::cublasLt_static)
+            else()
+                target_link_libraries(ggml-cuda PRIVATE  CUDA::cudart_static CUDA::cublas_static)
+            endif()
         endif()
     else()
-        target_link_libraries(ggml-cuda PRIVATE CUDA::cudart CUDA::cublas CUDA::cublasLt)
+        target_link_libraries(ggml-cuda PRIVATE CUDA::cudart CUDA::cublas)
     endif()
 
     if (GGML_CUDA_NO_VMM)
@@ -119,6 +148,11 @@ if (CUDAToolkit_FOUND)
     set(CUDA_CXX_FLAGS "")
 
     set(CUDA_FLAGS -use_fast_math -extended-lambda)
+
+    if (GGML_CUDA_DEBUG)
+        list(APPEND CUDA_FLAGS -lineinfo)
+        add_compile_definitions(GGML_CUDA_DEBUG)
+    endif()
 
     if (CUDAToolkit_VERSION VERSION_GREATER_EQUAL "12.8")
         # Options are:
