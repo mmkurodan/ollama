@@ -83,7 +83,7 @@ static void llama_jni_free() {
         g_ctx = nullptr;
     }
     if (g_model) {
-        llama_free_model(g_model);
+        llama_model_free(g_model);
         g_model = nullptr;
     }
 
@@ -125,7 +125,7 @@ Java_com_example_ollama_LlamaNative_init(
     llama_backend_init();
 
     llama_model_params mparams = llama_model_default_params();
-    g_model = llama_load_model_from_file(model_path.c_str(), mparams);
+    g_model = llama_model_load_from_file(model_path.c_str(), mparams);
     if (!g_model) {
         return env->NewStringUTF("failed to load model");
     }
@@ -144,7 +144,7 @@ Java_com_example_ollama_LlamaNative_init(
     cparams.n_seq_max       = 1;
     cparams.n_threads_batch = g_n_threads;
 
-    g_ctx = llama_new_context_with_model(g_model, cparams);
+    g_ctx = llama_init_from_model(g_model, cparams);
     if (!g_ctx) {
         llama_jni_free();
         return env->NewStringUTF("failed to create context");
@@ -155,10 +155,8 @@ Java_com_example_ollama_LlamaNative_init(
     llama_sampler *chain = llama_sampler_chain_init(chain_params);
 
     llama_sampler_chain_add(chain, llama_sampler_init_top_k(g_top_k));
-    llama_sampler_chain_add(chain, llama_sampler_init_top_p(g_top_p));
+    llama_sampler_chain_add(chain, llama_sampler_init_top_p(g_top_p, /*min_keep*/ 1));
     llama_sampler_chain_add(chain, llama_sampler_init_temp(g_temp));
-
-    // 分布サンプラーは seed を取る
     llama_sampler_chain_add(chain, llama_sampler_init_dist((uint32_t) LLAMA_DEFAULT_SEED));
 
     g_sampler = chain;
@@ -187,11 +185,11 @@ Java_com_example_ollama_LlamaNative_generate(
     std::vector<llama_token> tokens(g_n_ctx);
 
     int32_t n_tokens = llama_tokenize(
-            g_ctx,
+            g_vocab,
             prompt.c_str(),
-            (int) prompt.size(),
+            (int32_t) prompt.size(),
             tokens.data(),
-            (int) tokens.size(),
+            (int32_t) tokens.size(),
             /*add_special*/ true,
             /*parse_special*/ false
     );
@@ -217,8 +215,7 @@ Java_com_example_ollama_LlamaNative_generate(
         batch.token[0] = tokens[i];
         batch.pos[0]   = n_past;
 
-        // logits: 0 なら出さない、1 なら出す
-        batch.logits[0] = 0;
+        batch.logits[0] = 0; // このトークンでは logits を出さない
 
         if (llama_decode(g_ctx, batch) != 0) {
             llama_batch_free(batch);
@@ -230,21 +227,19 @@ Java_com_example_ollama_LlamaNative_generate(
 
     // ---- 生成ループ ----
     for (int i = 0; i < max_tokens; ++i) {
-        // 次トークン生成のための decode：1 トークン分の logits を出す
+        // 次トークン生成のために logits を1トークン分出す
         batch.n_tokens  = 1;
-        batch.token[0]  = tokens.back(); // ダミーでも可だが、一応最後のトークンを再利用
+        batch.token[0]  = tokens.back(); // 直前トークンを使う（実装上は dummy でもよい）
         batch.pos[0]    = n_past;
-        batch.logits[0] = 1;             // このトークンの logits を出す
+        batch.logits[0] = 1; // このトークンの logits を出力
 
         if (llama_decode(g_ctx, batch) != 0) {
             llama_batch_free(batch);
             return env->NewStringUTF("decode failed (gen)");
         }
 
-        // logits のインデックスは 0（唯一のトークン）
         llama_token id = llama_sampler_sample(g_sampler, g_ctx, /*idx*/ 0);
 
-        // EOS 判定は vocab ベース
         if (id == llama_vocab_eos(g_vocab)) {
             break;
         }
@@ -275,7 +270,6 @@ Java_com_example_ollama_LlamaNative_generate(
             output += piece;
         }
 
-        // 次のステップのために tokens にも追加
         tokens.push_back(id);
         ++n_past;
     }
