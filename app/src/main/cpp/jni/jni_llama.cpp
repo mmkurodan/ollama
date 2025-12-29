@@ -156,7 +156,7 @@ static void llama_jni_free() {
     log_to_file("Backend freed");
 
     // close log file if open
-n    std::lock_guard<std::mutex> llog(g_log_mutex);
+    std::lock_guard<std::mutex> llog(g_log_mutex);
     if (g_log_ofs.is_open()) {
         g_log_ofs << current_time_str() << " [JNI] Log closed" << std::endl;
         g_log_ofs.close();
