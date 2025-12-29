@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -O3 -fPIC")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fPIC")
 
-# llama.cpp のルート（0.4.4）
+# llama.cpp のルート（gguf-v0.4.4）
 set(LLAMA_ROOT_DIR ${CMAKE_SOURCE_DIR}/llama)
 
 add_library(
@@ -18,9 +18,8 @@ add_library(
     # JNI
     jni/jni_llama.cpp
 
-    # llama.cpp 本体
+    # llama core
     ${LLAMA_ROOT_DIR}/llama.cpp
-    ${LLAMA_ROOT_DIR}/models/llama.cpp
 
     # ggml core
     ${LLAMA_ROOT_DIR}/ggml.c
@@ -28,7 +27,7 @@ add_library(
     ${LLAMA_ROOT_DIR}/ggml-quants.c
     ${LLAMA_ROOT_DIR}/ggml-cpu.c
 
-    # quantization
+    # quant kernels
     ${LLAMA_ROOT_DIR}/k_quants.c
 )
 
@@ -36,7 +35,6 @@ target_include_directories(
     llama_jni
     PRIVATE
     ${LLAMA_ROOT_DIR}
-    ${LLAMA_ROOT_DIR}/models
 
     ${CMAKE_SOURCE_DIR}/third_party/libcurl/include
     ${CMAKE_SOURCE_DIR}/third_party/mbedtls/include
