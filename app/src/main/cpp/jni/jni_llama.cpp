@@ -13,10 +13,10 @@
 
 // ---------------- グローバル ----------------
 static std::mutex g_mutex;
-static llama_model        *g_model = nullptr;
-static llama_context      *g_ctx   = nullptr;
+static llama_model        *g_model   = nullptr;
+static llama_context      *g_ctx     = nullptr;
 static llama_sampler      *g_sampler = nullptr;
-static const llama_vocab  *g_vocab  = nullptr;
+static const llama_vocab  *g_vocab   = nullptr;
 
 // 設定
 static int   g_n_ctx      = 512;
@@ -141,7 +141,8 @@ Java_com_example_ollama_LlamaNative_init(
     cparams.n_seq_max       = 1;
     cparams.n_threads_batch = g_n_threads;
 
-    g_ctx = llama_init_from_model(g_model, cparams);
+    // ★ 0.4.4 の正しい API
+    g_ctx = llama_new_context_with_model(g_model, cparams);
     if (!g_ctx) {
         llama_jni_free();
         return env->NewStringUTF("failed to create context");
@@ -180,17 +181,15 @@ Java_com_example_ollama_LlamaNative_generate(
     // ---- KV キャッシュクリア ----
     llama_kv_cache_clear(g_ctx);
 
-    // ---- トークナイズ ----
+    // ---- トークナイズ（0.4.4 仕様）----
     std::vector<llama_token> tokens(g_n_ctx);
 
     int32_t n_tokens = llama_tokenize(
-            g_vocab,
+            g_model,
             prompt.c_str(),
-            (int32_t) prompt.size(),
             tokens.data(),
-            (int32_t) tokens.size(),
-            true,
-            false
+            tokens.size(),
+            true
     );
 
     if (n_tokens <= 0) {
