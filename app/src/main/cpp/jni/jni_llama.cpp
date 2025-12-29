@@ -127,14 +127,6 @@ Java_com_example_ollama_LlamaNative_download(
         return env->NewStringUTF("invalid args");
     }
 
-    // Ensure g_jvm is set so that progress callbacks can attach to the JVM
-    if (g_jvm == nullptr) {
-        if (env->GetJavaVM(&g_jvm) != JNI_OK) {
-            // keep g_jvm as nullptr if failed; progress callbacks will then be disabled
-            g_jvm = nullptr;
-        }
-    }
-
     CURL* curl = curl_easy_init();
     if (!curl) {
         env->ReleaseStringUTFChars(jurl,  url);
