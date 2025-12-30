@@ -531,7 +531,8 @@ Java_com_example_ollama_LlamaNative_generate(
                 (int)out_tokens.size(),
                 buf,
                 sizeof(buf),
-                true // special tokens allowed
+                true, // special tokens allowed
+                false
         );
 
         if (n_chars > 0) {
