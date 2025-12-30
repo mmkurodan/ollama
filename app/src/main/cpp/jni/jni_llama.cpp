@@ -360,7 +360,7 @@ Java_com_example_ollama_LlamaNative_init(
     llama_backend_init();
     log_to_file("init: backend init");
 
-// ★ CPU backend をレジストリ経由で登録
+    // ★ CPU backend をレジストリ経由で登録
     ggml_backend_reg_t cpu_reg = ggml_backend_cpu_reg();
     if (cpu_reg) {
         ggml_backend_register(cpu_reg);
@@ -503,6 +503,10 @@ Java_com_example_ollama_LlamaNative_generate(
 
     log_to_file("generate: sampler chain initialized");
 
+    // detokenize 用にトークン列を保持
+    std::vector<llama_token> out_tokens;
+    out_tokens.reserve(max_tokens);
+
     for (int i = 0; i < max_tokens; ++i) {
         // Get logits for the last token (index -1 means last position)
         const llama_token id = llama_sampler_sample(smpl, g_ctx, -1);
@@ -516,40 +520,36 @@ Java_com_example_ollama_LlamaNative_generate(
             break;
         }
 
-        // token -> piece (vocab-based API with lstrip parameter)
-        int32_t n_chars = llama_token_to_piece(
+        // 生成トークンを蓄積
+        out_tokens.push_back(id);
+
+        // detokenize で UTF-8 文字列を得る（壊れた特殊トークンは無視される）
+        char buf[4096];
+        int n_chars = llama_detokenize(
                 vocab,
-                id,
-                nullptr,
-                0,
-                0,      // lstrip
-                true   // special
+                out_tokens.data(),
+                (int)out_tokens.size(),
+                buf,
+                sizeof(buf),
+                true // special tokens allowed
         );
 
         if (n_chars > 0) {
-            std::string piece;
-            piece.resize(n_chars);
-            llama_token_to_piece(
-                    vocab,
-                    id,
-                    piece.data(),
-                    n_chars,
-                    0,      // lstrip
-                    true   // special
-            );
+            std::string piece(buf, n_chars);
             output += piece;
 
-            // ログ：生成トークン情報
             {
                 std::ostringstream ss;
                 ss << "generate: output token id=" << (int)id
-                   << " piece=\"" << piece << "\" i=" << i;
+                   << " piece=\"" << piece << "\" i=" << i
+                   << " n_chars=" << n_chars;
                 log_to_file(ss.str());
             }
         } else {
             std::ostringstream ss;
-            ss << "generate: token_to_piece returned n_chars=" << n_chars
-               << " id=" << (int)id;
+            ss << "generate: detokenize returned n_chars=" << n_chars
+               << " last_id=" << (int)id
+               << " out_tokens_size=" << out_tokens.size();
             log_to_file(ss.str());
         }
 
@@ -574,6 +574,7 @@ Java_com_example_ollama_LlamaNative_generate(
 
     return env->NewStringUTF(output.c_str());
 }
+
 // ---------------- JNI: free ----------------
 extern "C"
 JNIEXPORT void JNICALL
@@ -583,5 +584,3 @@ Java_com_example_ollama_LlamaNative_free(
     log_to_file("Java_com_example_ollama_LlamaNative_free called");
     llama_jni_free();
 }
-
-
