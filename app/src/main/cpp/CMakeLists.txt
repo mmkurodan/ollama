@@ -61,6 +61,7 @@ set(GGML_SOURCES
     ${GGML_ROOT_DIR}/src/ggml-cpu/vec.cpp
     ${GGML_ROOT_DIR}/src/ggml-cpu/binary-ops.cpp
     ${GGML_ROOT_DIR}/src/ggml-cpu/hbm.cpp
+    ${GGML_ROOT_DIR}/src/ggml-cpu/kleidiai/kernels.cpp
 )
 
 # ---------------------------------------------------------
