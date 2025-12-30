@@ -16,7 +16,12 @@ set(LLAMA_ROOT_DIR ${CMAKE_SOURCE_DIR}/llama)
 set(GGML_ROOT_DIR  ${LLAMA_ROOT_DIR}/ggml)
 
 # ---------------------------------------------------------
-# build-info.cpp を生成（llama.cpp の公式仕様）
+# build-info.cmake を読み込み（BUILD_NUMBER/COMMIT を生成）
+# ---------------------------------------------------------
+include(${LLAMA_ROOT_DIR}/cmake/build-info.cmake)
+
+# ---------------------------------------------------------
+# build-info.cpp を生成
 # ---------------------------------------------------------
 configure_file(
     ${LLAMA_ROOT_DIR}/common/build-info.cpp.in
@@ -46,7 +51,7 @@ set(LLAMA_SOURCES
 )
 
 # ---------------------------------------------------------
-# GGML sources (CPU backend only, ARM 最適化含む)
+# GGML sources (旧構造 GGML に合わせる)
 # ---------------------------------------------------------
 set(GGML_SOURCES
     ${GGML_ROOT_DIR}/src/ggml.c
@@ -70,13 +75,7 @@ set(GGML_SOURCES
     ${GGML_ROOT_DIR}/src/ggml-cpu/binary-ops.cpp
     ${GGML_ROOT_DIR}/src/ggml-cpu/hbm.cpp
 
-    # ARM 最適化（公式 CMakeLists に基づく）
-    ${GGML_ROOT_DIR}/src/ggml-cpu/arch/arm/arm.cpp
-    ${GGML_ROOT_DIR}/src/ggml-cpu/arch/arm/arm_neon.cpp
-    ${GGML_ROOT_DIR}/src/ggml-cpu/arch/arm/arm_bf16.cpp
-    ${GGML_ROOT_DIR}/src/ggml-cpu/arch/arm/arm_fp16.cpp
-    ${GGML_ROOT_DIR}/src/ggml-cpu/arch/arm/arm_q8_0.cpp
-    ${GGML_ROOT_DIR}/src/ggml-cpu/arch/arm/arm_q4_0.cpp
+    # ★ 旧構造 GGML：ARM は quants.c のみ存在
     ${GGML_ROOT_DIR}/src/ggml-cpu/arch/arm/quants.c
 )
 
