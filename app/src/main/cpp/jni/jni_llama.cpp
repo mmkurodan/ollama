@@ -357,7 +357,7 @@ Java_com_example_ollama_LlamaNative_init(
 
     llama_backend_init();
     log_to_file("init: backend init");
-    ggml_backend_load_all(nullptr);
+    ggml_backend_load_all();
     log_to_file("init: ggml_backend_load_all called");
 
     llama_model_params mparams = llama_model_default_params();
