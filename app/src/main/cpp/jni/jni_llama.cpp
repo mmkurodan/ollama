@@ -62,7 +62,8 @@ static void log_to_file(const std::string& msg) {
 }
 
 // ---------------- llama.cpp ログコールバック ----------------
-static void llama_log_callback(enum llama_log_level level, const char * text, void * user_data) {
+// 0.17.1 は llama_log_level ではなく ggml_log_level を使う
+static void llama_log_callback(enum ggml_log_level level, const char * text, void * user_data) {
     std::string msg = text ? text : "";
     LOGI("[llama.cpp] %s", msg.c_str());
     log_to_file(std::string("llama.cpp: ") + msg);
@@ -291,7 +292,7 @@ Java_com_example_ollama_LlamaNative_init(
 
     log_to_file("init: start");
 
-    // llama.cpp ログコールバック登録
+    // ★ llama.cpp 内部ログを JNI 側へ流す
     llama_log_set(llama_log_callback, nullptr);
     log_to_file("init: llama_log_callback registered");
 
@@ -483,14 +484,88 @@ Java_com_example_ollama_LlamaNative_generate(
     llama_sampler_chain_add(smpl, llama_sampler_init_top_p(g_top_p, 1));
     llama_sampler_chain_add(smpl, llama_sampler_init_temp(g_temp));
     llama_sampler_chain_add(smpl, llama_sampler_init_dist(LLAMA_DEFAULT_SEED));
-    
+
     log_to_file("generate: sampler chain initialized");
-    
+
     for (int i = 0; i < max_tokens; ++i) {
+        // Get logits for the last token (index -1 means last position)
         const llama_token id = llama_sampler_sample(smpl, g_ctx, -1);
-        
+
+        // Accept the token
         llama_sampler_accept(smpl, id);
 
+        // check eos
         if (llama_vocab_is_eog(vocab, id)) {
             log_to_file("generate: reached EOS");
-            break
+            break;
+        }
+
+        // token -> piece (vocab-based API with lstrip parameter)
+        int32_t n_chars = llama_token_to_piece(
+                vocab,
+                id,
+                nullptr,
+                0,
+                0,      // lstrip
+                false   // special
+        );
+
+        if (n_chars > 0) {
+            std::string piece;
+            piece.resize(n_chars);
+            llama_token_to_piece(
+                    vocab,
+                    id,
+                    piece.data(),
+                    n_chars,
+                    0,      // lstrip
+                    false   // special
+            );
+            output += piece;
+
+            // ログ：生成トークン情報
+            {
+                std::ostringstream ss;
+                ss << "generate: output token id=" << (int)id
+                   << " piece=\"" << piece << "\" i=" << i;
+                log_to_file(ss.str());
+            }
+        } else {
+            std::ostringstream ss;
+            ss << "generate: token_to_piece returned n_chars=" << n_chars
+               << " id=" << (int)id;
+            log_to_file(ss.str());
+        }
+
+        // feed token into model for next step using batch API
+        llama_token id_mut = id; // llama_batch_get_one expects non-const pointer
+        llama_batch batch = llama_batch_get_one(&id_mut, 1);
+        if (llama_decode(g_ctx, batch) != 0) {
+            log_to_file("generate: decode failed (generation)");
+            llama_sampler_free(smpl);
+            return env->NewStringUTF("decode failed (generation)");
+        }
+    }
+
+    // Free the sampler chain
+    llama_sampler_free(smpl);
+
+    {
+        std::ostringstream ss;
+        ss << "generate: finished, output_len=" << output.size();
+        log_to_file(ss.str());
+    }
+
+    return env->NewStringUTF(output.c_str());
+}
+// ---------------- JNI: free ----------------
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_example_ollama_LlamaNative_free(
+        JNIEnv *env, jobject /*thiz*/
+) {
+    log_to_file("Java_com_example_ollama_LlamaNative_free called");
+    llama_jni_free();
+}
+
+
