@@ -34,25 +34,32 @@ set(LLAMA_SOURCES
 )
 
 # ---------------------------------------------------------
-# GGML sources (gguf-v0.17.x 完全対応)
+# GGML sources (CPU backend only)
 # ---------------------------------------------------------
 set(GGML_SOURCES
     ${GGML_ROOT_DIR}/src/ggml.c
-    ${GGML_ROOT_DIR}/src/ggml-quants.c
+    ${GGML_ROOT_DIR}/src/ggml.cpp
     ${GGML_ROOT_DIR}/src/ggml-alloc.c
-    ${GGML_ROOT_DIR}/src/ggml-backend.c
+    ${GGML_ROOT_DIR}/src/ggml-quants.c
+    ${GGML_ROOT_DIR}/src/ggml-opt.cpp
+    ${GGML_ROOT_DIR}/src/ggml-threading.cpp
+    ${GGML_ROOT_DIR}/src/gguf.cpp
+    ${GGML_ROOT_DIR}/src/ggml-backend.cpp
 
     ${GGML_ROOT_DIR}/src/ggml-cpu/ggml-cpu.c
-    ${GGML_ROOT_DIR}/src/ggml-cpu/ggml-cpu-impl.c
-    ${GGML_ROOT_DIR}/src/ggml-cpu/ggml-cpu-quants.c
-    ${GGML_ROOT_DIR}/src/ggml-cpu/ggml-cpu-gemm.c
-    ${GGML_ROOT_DIR}/src/ggml-cpu/ggml-cpu-gemv.c
-    ${GGML_ROOT_DIR}/src/ggml-cpu/ggml-cpu-opt.c
-    ${GGML_ROOT_DIR}/src/ggml-cpu/ggml-cpu-quantize.c
+    ${GGML_ROOT_DIR}/src/ggml-cpu/ggml-cpu.cpp
+    ${GGML_ROOT_DIR}/src/ggml-cpu/ops.cpp
+    ${GGML_ROOT_DIR}/src/ggml-cpu/quants.c
+    ${GGML_ROOT_DIR}/src/ggml-cpu/repack.cpp
+    ${GGML_ROOT_DIR}/src/ggml-cpu/traits.cpp
+    ${GGML_ROOT_DIR}/src/ggml-cpu/unary-ops.cpp
+    ${GGML_ROOT_DIR}/src/ggml-cpu/vec.cpp
+    ${GGML_ROOT_DIR}/src/ggml-cpu/binary-ops.cpp
+    ${GGML_ROOT_DIR}/src/ggml-cpu/hbm.cpp
 )
 
 # ---------------------------------------------------------
-# vendor sources (xxhash など)
+# vendor sources (xxhash)
 # ---------------------------------------------------------
 file(GLOB VENDOR_SOURCES
     ${LLAMA_ROOT_DIR}/vendor/xxhash/*.c
@@ -112,7 +119,6 @@ set_target_properties(mbedcrypto PROPERTIES
         ${CMAKE_SOURCE_DIR}/third_party/mbedtls/lib/libmbedcrypto.a
 )
 
-# ★ 修正：mbedx509 は libmbedx509.a を指す（以前は libmbedtls.a で誤り）
 add_library(mbedx509 STATIC IMPORTED)
 set_target_properties(mbedx509 PROPERTIES
     IMPORTED_LOCATION
