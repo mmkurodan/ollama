@@ -68,8 +68,8 @@ public class MainActivity extends Activity {
             try { Thread.sleep(100); } catch (InterruptedException ignored) {}
 
             final String url =
-                "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/"
-                + "tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf";
+                "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v0.3-GGUF/resolve/main/"
+                + "tinyllama-1.1b-chat-v0.3.Q4_K_M.gguf";
 
             File dir = getFilesDir();
             File modelFile = new File(dir, "tinyllama.gguf");
