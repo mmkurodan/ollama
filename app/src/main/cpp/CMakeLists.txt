@@ -5,7 +5,6 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# ビルドタイプを明示（必要に応じて Debug に変更してもよい）
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
@@ -13,9 +12,16 @@ endif()
 set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -O3 -fPIC")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fPIC")
 
-# llama.cpp root
 set(LLAMA_ROOT_DIR ${CMAKE_SOURCE_DIR}/llama)
 set(GGML_ROOT_DIR  ${LLAMA_ROOT_DIR}/ggml)
+
+# ---------------------------------------------------------
+# build-info.cpp を生成（★追加）
+# ---------------------------------------------------------
+configure_file(
+    ${LLAMA_ROOT_DIR}/common/build-info.cpp.in
+    ${CMAKE_CURRENT_BINARY_DIR}/build-info.cpp
+)
 
 # ---------------------------------------------------------
 # llama core sources
@@ -36,6 +42,8 @@ set(LLAMA_SOURCES
     ${LLAMA_ROOT_FILES}
     ${LLAMA_COMMON_FILES}
     ${LLAMA_SRC_FILES}
+
+    ${CMAKE_CURRENT_BINARY_DIR}/build-info.cpp   # ★追加：生成された build-info.cpp
 )
 
 # ---------------------------------------------------------
@@ -50,6 +58,7 @@ set(GGML_SOURCES
     ${GGML_ROOT_DIR}/src/ggml-threading.cpp
     ${GGML_ROOT_DIR}/src/gguf.cpp
     ${GGML_ROOT_DIR}/src/ggml-backend.cpp
+    ${GGML_ROOT_DIR}/src/ggml-backend-reg.cpp
 
     ${GGML_ROOT_DIR}/src/ggml-cpu/ggml-cpu.c
     ${GGML_ROOT_DIR}/src/ggml-cpu/ggml-cpu.cpp
@@ -61,7 +70,7 @@ set(GGML_SOURCES
     ${GGML_ROOT_DIR}/src/ggml-cpu/vec.cpp
     ${GGML_ROOT_DIR}/src/ggml-cpu/binary-ops.cpp
     ${GGML_ROOT_DIR}/src/ggml-cpu/hbm.cpp
-    ${GGML_ROOT_DIR}/src/ggml-backend-reg.cpp
+
     ${GGML_ROOT_DIR}/src/ggml-cpu/arch/arm/quants.c
 )
 
@@ -87,7 +96,7 @@ add_library(
 )
 
 # ---------------------------------------------------------
-# compile definitions (enable K-quant support)
+# compile definitions
 # ---------------------------------------------------------
 target_compile_definitions(
     llama_jni
