@@ -18,6 +18,7 @@
 
 #include "llama.h"
 #include "ggml-backend.h"
+#include "ggml-backend-impl.h"   // ★ これが必要
 #include "ggml-cpu.h"
 #include <curl/curl.h>
 
