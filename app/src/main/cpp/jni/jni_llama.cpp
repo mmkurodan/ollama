@@ -18,6 +18,7 @@
 
 #include "llama.h"
 #include "ggml-backend.h"
+#include "ggml-cpu.h"
 #include <curl/curl.h>
 
 // ---------------- グローバル ----------------
@@ -357,9 +358,16 @@ Java_com_example_ollama_LlamaNative_init(
 
     llama_backend_init();
     log_to_file("init: backend init");
-    ggml_backend_load_all();
-    log_to_file("init: ggml_backend_load_all called");
 
+// ★ CPU backend を手動で登録
+    ggml_backend_t cpu_backend = ggml_backend_cpu_init();
+    if (cpu_backend) {
+       ggml_backend_register(cpu_backend);
+       log_to_file("init: CPU backend registered manually");
+    } else {
+       log_to_file("init: CPU backend init failed");
+    }
+    
     llama_model_params mparams = llama_model_default_params();
 
     {
