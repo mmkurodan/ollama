@@ -5,7 +5,7 @@ project("llama_jni")
 set(GGML_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../../../llm/llama.cpp)
 
 add_library(llama_jni SHARED
-        llama_jni.cpp)
+        jni/jni_llama.cpp)
 
 target_include_directories(llama_jni PRIVATE
         ${GGML_ROOT_DIR}/include
