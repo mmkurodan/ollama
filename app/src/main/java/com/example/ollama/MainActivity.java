@@ -255,7 +255,6 @@ public class MainActivity extends Activity {
             String initResult = null;
             try {
                 initResult = llama.init(modelPath);
-                appendMessage("init(modelPath) returned: " + initResult);
             } catch (Throwable t) {
                 appendException("init(modelPath) threw", t);
                 runOnUiThread(() -> {
@@ -266,11 +265,16 @@ public class MainActivity extends Activity {
                 return;
             }
 
-            if (!"ok".equals(initResult)) {
-                appendMessage("Model init failed: " + initResult);
+            // make an effectively-final copy for use in lambdas
+            final String finalInitResult = initResult;
+
+            appendMessage("init(modelPath) returned: " + finalInitResult);
+
+            if (!"ok".equals(finalInitResult)) {
+                appendMessage("Model init failed: " + finalInitResult);
                 runOnUiThread(() -> {
-                    showToast("Model init failed: " + initResult);
-                    fileInfo.setText("Model init failed: " + initResult);
+                    showToast("Model init failed: " + finalInitResult);
+                    fileInfo.setText("Model init failed: " + finalInitResult);
                     loadButton.setEnabled(true);
                 });
                 return;
@@ -306,7 +310,7 @@ public class MainActivity extends Activity {
         return "<|system|>\n"
              + "You are a helpful assistant.</s>\n"
              + "<|user|>\n"
-             + "" + userInput + "</s>\n"
+             + userInput + "</s>\n"
              + "<|assistant|>\n";
     }
 
