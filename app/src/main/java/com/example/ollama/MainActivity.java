@@ -308,9 +308,9 @@ public class MainActivity extends Activity {
     // ★ ChatML（EOS 付き）テンプレート
     private String toChatML(String userInput) {
         return "<|system|>\n"
-             + "You are a helpful assistant.</s>\n"
+             + "You are a helpful assistant.\n"
              + "<|user|>\n"
-             + userInput + "</s>\n"
+             + userInput + "\n"
              + "<|assistant|>\n";
     }
 
