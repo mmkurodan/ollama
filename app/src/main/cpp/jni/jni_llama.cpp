@@ -445,7 +445,7 @@ Java_com_example_ollama_LlamaNative_generate(
         ss << "generate: prompt=\n" << prompt;
         log_to_file(ss.str());
     }
-    const int max_tokens = 128;
+    const int max_tokens = 1024;
 
     llama_memory_t mem = llama_get_memory(g_ctx);
     llama_memory_seq_rm(mem, -1, 0, -1);
