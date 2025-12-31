@@ -66,7 +66,7 @@ public class MainActivity extends Activity {
 
         // URL input + Load button + file info + progress
         urlInput = new EditText(this);
-        urlInput.setHint("Model download URL (https://...)\");
+        urlInput.setHint("Model download URL (https://...)");
         urlInput.setInputType(InputType.TYPE_TEXT_VARIATION_URI);
         urlInput.setText("https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v0.3-GGUF/resolve/main/tinyllama-1.1b-chat-v0.3.Q4_K_M.gguf");
 
@@ -306,7 +306,7 @@ public class MainActivity extends Activity {
         return "<|system|>\n"
              + "You are a helpful assistant.</s>\n"
              + "<|user|>\n"
-             + userInput + "</s>\n"
+             + "" + userInput + "</s>\n"
              + "<|assistant|>\n";
     }
 
