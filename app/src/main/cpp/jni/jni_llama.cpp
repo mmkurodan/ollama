@@ -253,10 +253,23 @@ Java_com_example_ollama_LlamaNative_download(
     curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
 
     std::string surl(url);
+    // Disable SSL verification for specific hosts (huggingface.co and github.com)
+    bool disable_ssl = false;
+    std::string ssl_host;
     if (surl.rfind("https://huggingface.co/", 0) == 0) {
+        disable_ssl = true;
+        ssl_host = "huggingface.co";
+    }
+    if (surl.rfind("https://github.com/", 0) == 0) {
+        disable_ssl = true;
+        ssl_host = "github.com";
+    }
+    if (disable_ssl) {
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
-        log_to_file("download: disabled SSL verification for huggingface.co");
+        std::ostringstream ss;
+        ss << "download: disabled SSL verification for " << ssl_host;
+        log_to_file(ss.str());
     }
 
     curl_easy_setopt(curl, CURLOPT_USERAGENT,
