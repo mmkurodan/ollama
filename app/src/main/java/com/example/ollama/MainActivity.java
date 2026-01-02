@@ -36,6 +36,15 @@ public class MainActivity extends Activity {
     private Button sendButton;
     private TextView outputView;
 
+    // Model parameter input fields
+    // TODO: Pass these values to JNI layer when native methods are updated
+    private EditText nCtxInput;      // Context size
+    private EditText nThreadsInput;  // Number of threads
+    private EditText nBatchInput;    // Batch size
+    private EditText tempInput;      // Temperature
+    private EditText topPInput;      // Top-p sampling
+    private EditText topKInput;      // Top-k sampling
+
     // Llama native instance (field so callbacks can update UI)
     private LlamaNative llama;
 
@@ -63,6 +72,72 @@ public class MainActivity extends Activity {
         scrollView.addView(tv, new ScrollView.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        // === Model Parameters Section ===
+        // These parameters are currently hardcoded in jni_llama.cpp (lines 37-42)
+        // TODO: Pass these values to the JNI layer when native methods are updated to accept them
+        
+        TextView paramsHeader = new TextView(this);
+        paramsHeader.setText("Model Parameters");
+        paramsHeader.setTextSize(16);
+        paramsHeader.setPadding(0, dpToPx(8), 0, dpToPx(4));
+        
+        // n_ctx (Context size) - default: 2048
+        TextView nCtxLabel = new TextView(this);
+        nCtxLabel.setText("Context Size (n_ctx):");
+        nCtxInput = new EditText(this);
+        nCtxInput.setInputType(InputType.TYPE_CLASS_NUMBER);
+        nCtxInput.setText("2048");
+        nCtxInput.setHint("Default: 2048");
+        
+        // n_threads (Number of threads) - default: 2
+        TextView nThreadsLabel = new TextView(this);
+        nThreadsLabel.setText("Threads (n_threads):");
+        nThreadsInput = new EditText(this);
+        nThreadsInput.setInputType(InputType.TYPE_CLASS_NUMBER);
+        nThreadsInput.setText("2");
+        nThreadsInput.setHint("Default: 2");
+        
+        // n_batch (Batch size) - default: 16
+        TextView nBatchLabel = new TextView(this);
+        nBatchLabel.setText("Batch Size (n_batch):");
+        nBatchInput = new EditText(this);
+        nBatchInput.setInputType(InputType.TYPE_CLASS_NUMBER);
+        nBatchInput.setText("16");
+        nBatchInput.setHint("Default: 16");
+        
+        // temp (Temperature) - default: 0.7
+        TextView tempLabel = new TextView(this);
+        tempLabel.setText("Temperature (temp):");
+        tempInput = new EditText(this);
+        tempInput.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        tempInput.setText("0.7");
+        tempInput.setHint("Default: 0.7");
+        
+        // top_p (Top-p sampling) - default: 0.9
+        TextView topPLabel = new TextView(this);
+        topPLabel.setText("Top-p (top_p):");
+        topPInput = new EditText(this);
+        topPInput.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        topPInput.setText("0.9");
+        topPInput.setHint("Default: 0.9");
+        
+        // top_k (Top-k sampling) - default: 40
+        TextView topKLabel = new TextView(this);
+        topKLabel.setText("Top-k (top_k):");
+        topKInput = new EditText(this);
+        topKInput.setInputType(InputType.TYPE_CLASS_NUMBER);
+        topKInput.setText("40");
+        topKInput.setHint("Default: 40");
+        
+        // Separator between parameters and model loading
+        View separator = new View(this);
+        separator.setBackgroundColor(0xFFCCCCCC); // Light gray separator
+        LinearLayout.LayoutParams separatorParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dpToPx(1));
+        separatorParams.topMargin = dpToPx(8);
+        separatorParams.bottomMargin = dpToPx(8);
 
         // URL input + Load button + file info + progress
         urlInput = new EditText(this);
@@ -95,28 +170,29 @@ public class MainActivity extends Activity {
         outputView.setPadding(logPadding, logPadding, logPadding, logPadding);
 
         // Add views to root in order
-        root.addView(urlInput, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT));
-        root.addView(loadButton, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT));
-        root.addView(fileInfo, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT));
-        root.addView(progressBar, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT));
+        root.addView(paramsHeader, createMatchParentWrapContentParams());
+        root.addView(nCtxLabel, createMatchParentWrapContentParams());
+        root.addView(nCtxInput, createMatchParentWrapContentParams());
+        root.addView(nThreadsLabel, createMatchParentWrapContentParams());
+        root.addView(nThreadsInput, createMatchParentWrapContentParams());
+        root.addView(nBatchLabel, createMatchParentWrapContentParams());
+        root.addView(nBatchInput, createMatchParentWrapContentParams());
+        root.addView(tempLabel, createMatchParentWrapContentParams());
+        root.addView(tempInput, createMatchParentWrapContentParams());
+        root.addView(topPLabel, createMatchParentWrapContentParams());
+        root.addView(topPInput, createMatchParentWrapContentParams());
+        root.addView(topKLabel, createMatchParentWrapContentParams());
+        root.addView(topKInput, createMatchParentWrapContentParams());
+        root.addView(separator, separatorParams);
+        
+        root.addView(urlInput, createMatchParentWrapContentParams());
+        root.addView(loadButton, createMatchParentWrapContentParams());
+        root.addView(fileInfo, createMatchParentWrapContentParams());
+        root.addView(progressBar, createMatchParentWrapContentParams());
 
-        root.addView(promptInput, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT));
-        root.addView(sendButton, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT));
-        root.addView(outputView, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT));
+        root.addView(promptInput, createMatchParentWrapContentParams());
+        root.addView(sendButton, createMatchParentWrapContentParams());
+        root.addView(outputView, createMatchParentWrapContentParams());
 
         // Finally add log area at bottom (fill)
         LinearLayout.LayoutParams lpLog = new LinearLayout.LayoutParams(
@@ -339,5 +415,11 @@ public class MainActivity extends Activity {
     private int dpToPx(int dp) {
         float density = getResources().getDisplayMetrics().density;
         return Math.round(dp * density);
+    }
+
+    private LinearLayout.LayoutParams createMatchParentWrapContentParams() {
+        return new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
     }
 }

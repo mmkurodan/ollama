@@ -1,1 +1,9 @@
 app/src/main/assets/*.gguf
+.gradle/
+gradle/
+gradlew
+gradlew.bat
+*.iml
+.idea/
+local.properties
+build/
