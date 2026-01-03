@@ -66,7 +66,7 @@ static float g_dry_multiplier       = 0.0f;
 static float g_dry_base             = 1.75f;
 static int   g_dry_allowed_length   = 2;
 static int   g_dry_penalty_last_n   = -1;
-static std::string g_dry_sequence_breakers = "\\n,\",*,:";
+static std::string g_dry_sequence_breakers = "\\n,:,\",*";
 
 // ---------------- ログユーティリティ ----------------
 static std::string current_time_str() {
@@ -625,7 +625,9 @@ Java_com_example_ollama_LlamaNative_generate(
     
     // 2. Add DRY sampler (if enabled)
     if (g_dry_multiplier > 0.0f) {
-        // Parse comma-separated sequence breakers
+        // Parse comma-separated sequence breakers with escape sequence support
+        // Users input escape sequences like "\n" (two characters: backslash + n)
+        // We need to convert them to actual characters (one character: newline)
         std::vector<std::string> breaker_strings;
         std::vector<const char*> breaker_ptrs;
         
@@ -633,19 +635,45 @@ Java_com_example_ollama_LlamaNative_generate(
         size_t pos = 0;
         while ((pos = temp.find(',')) != std::string::npos) {
             std::string token = temp.substr(0, pos);
-            // Handle escape sequences
-            if (token == "\\n") token = "\n";
-            else if (token == "\\t") token = "\t";
-            else if (token == "\\r") token = "\r";
-            breaker_strings.push_back(token);
+            if (!token.empty()) {
+                // Convert escape sequences to actual characters
+                std::string processed;
+                for (size_t i = 0; i < token.size(); ++i) {
+                    if (token[i] == '\\' && i + 1 < token.size()) {
+                        switch (token[i + 1]) {
+                            case 'n': processed += '\n'; i++; break;
+                            case 't': processed += '\t'; i++; break;
+                            case 'r': processed += '\r'; i++; break;
+                            case '\\': processed += '\\'; i++; break;
+                            case '"': processed += '"'; i++; break;
+                            default: processed += token[i]; break;
+                        }
+                    } else {
+                        processed += token[i];
+                    }
+                }
+                breaker_strings.push_back(processed);
+            }
             temp.erase(0, pos + 1);
         }
         // Don't forget the last token
         if (!temp.empty()) {
-            if (temp == "\\n") temp = "\n";
-            else if (temp == "\\t") temp = "\t";
-            else if (temp == "\\r") temp = "\r";
-            breaker_strings.push_back(temp);
+            std::string processed;
+            for (size_t i = 0; i < temp.size(); ++i) {
+                if (temp[i] == '\\' && i + 1 < temp.size()) {
+                    switch (temp[i + 1]) {
+                        case 'n': processed += '\n'; i++; break;
+                        case 't': processed += '\t'; i++; break;
+                        case 'r': processed += '\r'; i++; break;
+                        case '\\': processed += '\\'; i++; break;
+                        case '"': processed += '"'; i++; break;
+                        default: processed += temp[i]; break;
+                    }
+                } else {
+                    processed += temp[i];
+                }
+            }
+            breaker_strings.push_back(processed);
         }
         
         // Convert to const char* array

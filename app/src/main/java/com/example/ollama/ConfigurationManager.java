@@ -97,7 +97,7 @@ public class ConfigurationManager {
             dryBase = 1.75;
             dryAllowedLength = 2;
             dryPenaltyLastN = -1;
-            drySequenceBreakers = "\\n,\",*,:";
+            drySequenceBreakers = "\\n,:,\",*";
         }
         
         public Configuration(String name) {
@@ -184,7 +184,7 @@ public class ConfigurationManager {
             config.dryBase = json.optDouble("dryBase", 1.75);
             config.dryAllowedLength = json.optInt("dryAllowedLength", 2);
             config.dryPenaltyLastN = json.optInt("dryPenaltyLastN", -1);
-            config.drySequenceBreakers = json.optString("drySequenceBreakers", "\\n,\",*,:");
+            config.drySequenceBreakers = json.optString("drySequenceBreakers", "\\n,:,\",*");
             
             return config;
         }

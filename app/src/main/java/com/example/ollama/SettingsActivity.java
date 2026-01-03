@@ -391,7 +391,7 @@ public class SettingsActivity extends Activity {
         
         config.drySequenceBreakers = drySequenceBreakersInput.getText().toString();
         if (config.drySequenceBreakers.isEmpty()) {
-            config.drySequenceBreakers = "\\n,\",*,:";
+            config.drySequenceBreakers = "\\n,:,\",*";
         }
         
         return config;
