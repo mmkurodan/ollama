@@ -19,6 +19,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
+import static com.example.ollama.ConfigurationManager.Configuration.DEFAULT_DRY_SEQUENCE_BREAKERS;
+
 public class SettingsActivity extends Activity {
     private static final String TAG = "SettingsActivity";
     
@@ -391,7 +393,7 @@ public class SettingsActivity extends Activity {
         
         config.drySequenceBreakers = drySequenceBreakersInput.getText().toString();
         if (config.drySequenceBreakers.isEmpty()) {
-            config.drySequenceBreakers = ConfigurationManager.Configuration.DEFAULT_DRY_SEQUENCE_BREAKERS;
+            config.drySequenceBreakers = DEFAULT_DRY_SEQUENCE_BREAKERS;
         }
         
         return config;
