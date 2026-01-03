@@ -133,7 +133,8 @@ public class MainActivity extends Activity {
                         (float)currentConfig.dryMultiplier,
                         (float)currentConfig.dryBase,
                         currentConfig.dryAllowedLength,
-                        currentConfig.dryPenaltyLastN
+                        currentConfig.dryPenaltyLastN,
+                        currentConfig.drySequenceBreakers
                     );
                 } catch (Throwable t) {
                     Log.e(TAG, "Failed to set parameters", t);

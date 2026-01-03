@@ -66,6 +66,7 @@ static float g_dry_multiplier       = 0.0f;
 static float g_dry_base             = 1.75f;
 static int   g_dry_allowed_length   = 2;
 static int   g_dry_penalty_last_n   = -1;
+static std::string g_dry_sequence_breakers = "\\n,\",*,:";
 
 // ---------------- ログユーティリティ ----------------
 static std::string current_time_str() {
@@ -480,7 +481,8 @@ Java_com_example_ollama_LlamaNative_setParameters(
         jfloat dynatempRange, jfloat dynatempExponent,
         jfloat xtcProbability, jfloat xtcThreshold,
         jfloat topNSigma,
-        jfloat dryMultiplier, jfloat dryBase, jint dryAllowedLength, jint dryPenaltyLastN
+        jfloat dryMultiplier, jfloat dryBase, jint dryAllowedLength, jint dryPenaltyLastN,
+        jstring jDrySequenceBreakers
 ) {
     std::lock_guard<std::mutex> lock(g_mutex);
     
@@ -509,6 +511,7 @@ Java_com_example_ollama_LlamaNative_setParameters(
     g_dry_base = dryBase;
     g_dry_allowed_length = dryAllowedLength;
     g_dry_penalty_last_n = dryPenaltyLastN;
+    g_dry_sequence_breakers = jstring_to_std(env, jDrySequenceBreakers);
     
     {
         std::ostringstream ss;
@@ -529,7 +532,8 @@ Java_com_example_ollama_LlamaNative_setParameters(
            << " dry_multiplier=" << g_dry_multiplier
            << " dry_base=" << g_dry_base
            << " dry_allowed_length=" << g_dry_allowed_length
-           << " dry_penalty_last_n=" << g_dry_penalty_last_n;
+           << " dry_penalty_last_n=" << g_dry_penalty_last_n
+           << " dry_sequence_breakers=\"" << g_dry_sequence_breakers << "\"";
         log_to_file(ss.str());
     }
 }
@@ -621,11 +625,44 @@ Java_com_example_ollama_LlamaNative_generate(
     
     // 2. Add DRY sampler (if enabled)
     if (g_dry_multiplier > 0.0f) {
-        const char* dry_breakers[] = {"\n", ":", "\"", "*"};
-        llama_sampler_chain_add(smpl, llama_sampler_init_dry(
-            vocab, g_n_ctx, g_dry_multiplier, g_dry_base, 
-            g_dry_allowed_length, g_dry_penalty_last_n, dry_breakers, 4));
-        log_to_file("generate: added DRY sampler");
+        // Parse comma-separated sequence breakers
+        std::vector<std::string> breaker_strings;
+        std::vector<const char*> breaker_ptrs;
+        
+        std::string temp = g_dry_sequence_breakers;
+        size_t pos = 0;
+        while ((pos = temp.find(',')) != std::string::npos) {
+            std::string token = temp.substr(0, pos);
+            // Handle escape sequences
+            if (token == "\\n") token = "\n";
+            else if (token == "\\t") token = "\t";
+            else if (token == "\\r") token = "\r";
+            breaker_strings.push_back(token);
+            temp.erase(0, pos + 1);
+        }
+        // Don't forget the last token
+        if (!temp.empty()) {
+            if (temp == "\\n") temp = "\n";
+            else if (temp == "\\t") temp = "\t";
+            else if (temp == "\\r") temp = "\r";
+            breaker_strings.push_back(temp);
+        }
+        
+        // Convert to const char* array
+        for (const auto& s : breaker_strings) {
+            breaker_ptrs.push_back(s.c_str());
+        }
+        
+        if (!breaker_ptrs.empty()) {
+            llama_sampler_chain_add(smpl, llama_sampler_init_dry(
+                vocab, g_n_ctx, g_dry_multiplier, g_dry_base, 
+                g_dry_allowed_length, g_dry_penalty_last_n, 
+                breaker_ptrs.data(), breaker_ptrs.size()));
+            
+            std::ostringstream ss;
+            ss << "generate: added DRY sampler with " << breaker_ptrs.size() << " breakers";
+            log_to_file(ss.str());
+        }
     }
     
     // 3. Add top-n-sigma (if enabled)

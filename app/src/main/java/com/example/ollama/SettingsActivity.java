@@ -563,7 +563,8 @@ public class SettingsActivity extends Activity {
                         (float)config.dryMultiplier,
                         (float)config.dryBase,
                         config.dryAllowedLength,
-                        config.dryPenaltyLastN
+                        config.dryPenaltyLastN,
+                        config.drySequenceBreakers
                     );
                 } catch (Throwable t) {
                     Log.e(TAG, "Failed to set parameters", t);

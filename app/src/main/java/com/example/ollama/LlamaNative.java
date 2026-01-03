@@ -26,7 +26,8 @@ public class LlamaNative {
         float dynatempRange, float dynatempExponent,
         float xtcProbability, float xtcThreshold,
         float topNSigma,
-        float dryMultiplier, float dryBase, int dryAllowedLength, int dryPenaltyLastN
+        float dryMultiplier, float dryBase, int dryAllowedLength, int dryPenaltyLastN,
+        String drySequenceBreakers
     );
 
     // Called from native code to deliver download progress (0-100)
