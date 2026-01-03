@@ -19,6 +19,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
+import static com.example.ollama.ConfigurationManager.Configuration.DEFAULT_DRY_SEQUENCE_BREAKERS;
+
 public class SettingsActivity extends Activity {
     private static final String TAG = "SettingsActivity";
     
@@ -43,6 +45,33 @@ public class SettingsActivity extends Activity {
     private TextView modelFileInfo;
     private ProgressBar modelProgressBar;
     private Button loadModelButton;
+    
+    // Penalty parameter inputs
+    private EditText penaltyLastNInput;
+    private EditText penaltyRepeatInput;
+    private EditText penaltyFreqInput;
+    private EditText penaltyPresentInput;
+    
+    // Mirostat parameter inputs
+    private EditText mirostatInput;
+    private EditText mirostatTauInput;
+    private EditText mirostatEtaInput;
+    
+    // Additional sampling parameter inputs
+    private EditText minPInput;
+    private EditText typicalPInput;
+    private EditText dynatempRangeInput;
+    private EditText dynatempExponentInput;
+    private EditText xtcProbabilityInput;
+    private EditText xtcThresholdInput;
+    private EditText topNSigmaInput;
+    
+    // DRY parameter inputs
+    private EditText dryMultiplierInput;
+    private EditText dryBaseInput;
+    private EditText dryAllowedLengthInput;
+    private EditText dryPenaltyLastNInput;
+    private EditText drySequenceBreakersInput;
     
     private ConfigurationManager.Configuration currentConfig;
     private ArrayAdapter<String> configAdapter;
@@ -100,6 +129,33 @@ public class SettingsActivity extends Activity {
         modelProgressBar = findViewById(R.id.modelProgressBar);
         loadModelButton = findViewById(R.id.loadModelButton);
         
+        // Penalty parameter inputs
+        penaltyLastNInput = findViewById(R.id.penaltyLastNInput);
+        penaltyRepeatInput = findViewById(R.id.penaltyRepeatInput);
+        penaltyFreqInput = findViewById(R.id.penaltyFreqInput);
+        penaltyPresentInput = findViewById(R.id.penaltyPresentInput);
+        
+        // Mirostat parameter inputs
+        mirostatInput = findViewById(R.id.mirostatInput);
+        mirostatTauInput = findViewById(R.id.mirostatTauInput);
+        mirostatEtaInput = findViewById(R.id.mirostatEtaInput);
+        
+        // Additional sampling parameter inputs
+        minPInput = findViewById(R.id.minPInput);
+        typicalPInput = findViewById(R.id.typicalPInput);
+        dynatempRangeInput = findViewById(R.id.dynatempRangeInput);
+        dynatempExponentInput = findViewById(R.id.dynatempExponentInput);
+        xtcProbabilityInput = findViewById(R.id.xtcProbabilityInput);
+        xtcThresholdInput = findViewById(R.id.xtcThresholdInput);
+        topNSigmaInput = findViewById(R.id.topNSigmaInput);
+        
+        // DRY parameter inputs
+        dryMultiplierInput = findViewById(R.id.dryMultiplierInput);
+        dryBaseInput = findViewById(R.id.dryBaseInput);
+        dryAllowedLengthInput = findViewById(R.id.dryAllowedLengthInput);
+        dryPenaltyLastNInput = findViewById(R.id.dryPenaltyLastNInput);
+        drySequenceBreakersInput = findViewById(R.id.drySequenceBreakersInput);
+        
         Button saveConfigButton = findViewById(R.id.saveConfigButton);
         Button loadConfigButton = findViewById(R.id.loadConfigButton);
         Button deleteConfigButton = findViewById(R.id.deleteConfigButton);
@@ -143,6 +199,33 @@ public class SettingsActivity extends Activity {
         topPInput.setText(String.valueOf(config.topP));
         topKInput.setText(String.valueOf(config.topK));
         promptTemplateInput.setText(config.promptTemplate);
+        
+        // Penalty parameters
+        penaltyLastNInput.setText(String.valueOf(config.penaltyLastN));
+        penaltyRepeatInput.setText(String.valueOf(config.penaltyRepeat));
+        penaltyFreqInput.setText(String.valueOf(config.penaltyFreq));
+        penaltyPresentInput.setText(String.valueOf(config.penaltyPresent));
+        
+        // Mirostat parameters
+        mirostatInput.setText(String.valueOf(config.mirostat));
+        mirostatTauInput.setText(String.valueOf(config.mirostatTau));
+        mirostatEtaInput.setText(String.valueOf(config.mirostatEta));
+        
+        // Additional sampling parameters
+        minPInput.setText(String.valueOf(config.minP));
+        typicalPInput.setText(String.valueOf(config.typicalP));
+        dynatempRangeInput.setText(String.valueOf(config.dynatempRange));
+        dynatempExponentInput.setText(String.valueOf(config.dynatempExponent));
+        xtcProbabilityInput.setText(String.valueOf(config.xtcProbability));
+        xtcThresholdInput.setText(String.valueOf(config.xtcThreshold));
+        topNSigmaInput.setText(String.valueOf(config.topNSigma));
+        
+        // DRY parameters
+        dryMultiplierInput.setText(String.valueOf(config.dryMultiplier));
+        dryBaseInput.setText(String.valueOf(config.dryBase));
+        dryAllowedLengthInput.setText(String.valueOf(config.dryAllowedLength));
+        dryPenaltyLastNInput.setText(String.valueOf(config.dryPenaltyLastN));
+        drySequenceBreakersInput.setText(config.drySequenceBreakers);
     }
     
     private ConfigurationManager.Configuration getConfigFromUI() {
@@ -194,6 +277,123 @@ public class SettingsActivity extends Activity {
         config.promptTemplate = promptTemplateInput.getText().toString();
         if (config.promptTemplate.isEmpty()) {
             config.promptTemplate = "<|system|>\nYou are a helpful assistant.\n<|user|>\n{USER_INPUT}\n<|assistant|>\n";
+        }
+        
+        // Penalty parameters
+        try {
+            config.penaltyLastN = Integer.parseInt(penaltyLastNInput.getText().toString());
+        } catch (NumberFormatException e) {
+            config.penaltyLastN = 64;
+        }
+        
+        try {
+            config.penaltyRepeat = Double.parseDouble(penaltyRepeatInput.getText().toString());
+        } catch (NumberFormatException e) {
+            config.penaltyRepeat = 1.0;
+        }
+        
+        try {
+            config.penaltyFreq = Double.parseDouble(penaltyFreqInput.getText().toString());
+        } catch (NumberFormatException e) {
+            config.penaltyFreq = 0.0;
+        }
+        
+        try {
+            config.penaltyPresent = Double.parseDouble(penaltyPresentInput.getText().toString());
+        } catch (NumberFormatException e) {
+            config.penaltyPresent = 0.0;
+        }
+        
+        // Mirostat parameters
+        try {
+            config.mirostat = Integer.parseInt(mirostatInput.getText().toString());
+        } catch (NumberFormatException e) {
+            config.mirostat = 0;
+        }
+        
+        try {
+            config.mirostatTau = Double.parseDouble(mirostatTauInput.getText().toString());
+        } catch (NumberFormatException e) {
+            config.mirostatTau = 5.0;
+        }
+        
+        try {
+            config.mirostatEta = Double.parseDouble(mirostatEtaInput.getText().toString());
+        } catch (NumberFormatException e) {
+            config.mirostatEta = 0.1;
+        }
+        
+        // Additional sampling parameters
+        try {
+            config.minP = Double.parseDouble(minPInput.getText().toString());
+        } catch (NumberFormatException e) {
+            config.minP = 0.05;
+        }
+        
+        try {
+            config.typicalP = Double.parseDouble(typicalPInput.getText().toString());
+        } catch (NumberFormatException e) {
+            config.typicalP = 1.0;
+        }
+        
+        try {
+            config.dynatempRange = Double.parseDouble(dynatempRangeInput.getText().toString());
+        } catch (NumberFormatException e) {
+            config.dynatempRange = 0.0;
+        }
+        
+        try {
+            config.dynatempExponent = Double.parseDouble(dynatempExponentInput.getText().toString());
+        } catch (NumberFormatException e) {
+            config.dynatempExponent = 1.0;
+        }
+        
+        try {
+            config.xtcProbability = Double.parseDouble(xtcProbabilityInput.getText().toString());
+        } catch (NumberFormatException e) {
+            config.xtcProbability = 0.0;
+        }
+        
+        try {
+            config.xtcThreshold = Double.parseDouble(xtcThresholdInput.getText().toString());
+        } catch (NumberFormatException e) {
+            config.xtcThreshold = 0.1;
+        }
+        
+        try {
+            config.topNSigma = Double.parseDouble(topNSigmaInput.getText().toString());
+        } catch (NumberFormatException e) {
+            config.topNSigma = -1.0;
+        }
+        
+        // DRY parameters
+        try {
+            config.dryMultiplier = Double.parseDouble(dryMultiplierInput.getText().toString());
+        } catch (NumberFormatException e) {
+            config.dryMultiplier = 0.0;
+        }
+        
+        try {
+            config.dryBase = Double.parseDouble(dryBaseInput.getText().toString());
+        } catch (NumberFormatException e) {
+            config.dryBase = 1.75;
+        }
+        
+        try {
+            config.dryAllowedLength = Integer.parseInt(dryAllowedLengthInput.getText().toString());
+        } catch (NumberFormatException e) {
+            config.dryAllowedLength = 2;
+        }
+        
+        try {
+            config.dryPenaltyLastN = Integer.parseInt(dryPenaltyLastNInput.getText().toString());
+        } catch (NumberFormatException e) {
+            config.dryPenaltyLastN = -1;
+        }
+        
+        config.drySequenceBreakers = drySequenceBreakersInput.getText().toString();
+        if (config.drySequenceBreakers.isEmpty()) {
+            config.drySequenceBreakers = DEFAULT_DRY_SEQUENCE_BREAKERS;
         }
         
         return config;
@@ -343,6 +543,34 @@ public class SettingsActivity extends Activity {
                 loadModelButton.setEnabled(true);
                 modelProgressBar.setProgress(100);
                 showToast("Model initialized successfully");
+                
+                // Set parameters after successful model initialization
+                ConfigurationManager.Configuration config = getConfigFromUI();
+                try {
+                    llama.setParameters(
+                        config.penaltyLastN,
+                        (float)config.penaltyRepeat,
+                        (float)config.penaltyFreq,
+                        (float)config.penaltyPresent,
+                        config.mirostat,
+                        (float)config.mirostatTau,
+                        (float)config.mirostatEta,
+                        (float)config.minP,
+                        (float)config.typicalP,
+                        (float)config.dynatempRange,
+                        (float)config.dynatempExponent,
+                        (float)config.xtcProbability,
+                        (float)config.xtcThreshold,
+                        (float)config.topNSigma,
+                        (float)config.dryMultiplier,
+                        (float)config.dryBase,
+                        config.dryAllowedLength,
+                        config.dryPenaltyLastN,
+                        config.drySequenceBreakers
+                    );
+                } catch (Throwable t) {
+                    Log.e(TAG, "Failed to set parameters", t);
+                }
             });
         }).start();
     }

@@ -23,6 +23,9 @@ public class ConfigurationManager {
     private final File configDir;
     
     public static class Configuration {
+        // Default constant for DRY sequence breakers (must match C++ DEFAULT_DRY_SEQUENCE_BREAKERS)
+        public static final String DEFAULT_DRY_SEQUENCE_BREAKERS = "\\n,:,\",*";
+        
         public String name;
         public String modelUrl;
         public int nCtx;
@@ -32,6 +35,33 @@ public class ConfigurationManager {
         public double topP;
         public int topK;
         public String promptTemplate;
+        
+        // Penalty parameters
+        public int penaltyLastN;
+        public double penaltyRepeat;
+        public double penaltyFreq;
+        public double penaltyPresent;
+        
+        // Mirostat parameters
+        public int mirostat;
+        public double mirostatTau;
+        public double mirostatEta;
+        
+        // Additional sampling parameters
+        public double minP;
+        public double typicalP;
+        public double dynatempRange;
+        public double dynatempExponent;
+        public double xtcProbability;
+        public double xtcThreshold;
+        public double topNSigma;
+        
+        // DRY parameters
+        public double dryMultiplier;
+        public double dryBase;
+        public int dryAllowedLength;
+        public int dryPenaltyLastN;
+        public String drySequenceBreakers;
         
         public Configuration() {
             // Default values
@@ -44,6 +74,33 @@ public class ConfigurationManager {
             topP = 0.9;
             topK = 40;
             promptTemplate = "<|system|>\nYou are a helpful assistant.\n<|user|>\n{USER_INPUT}\n<|assistant|>\n";
+            
+            // Penalty parameters defaults
+            penaltyLastN = 64;
+            penaltyRepeat = 1.0;
+            penaltyFreq = 0.0;
+            penaltyPresent = 0.0;
+            
+            // Mirostat parameters defaults
+            mirostat = 0;
+            mirostatTau = 5.0;
+            mirostatEta = 0.1;
+            
+            // Additional sampling parameters defaults
+            minP = 0.05;
+            typicalP = 1.0;
+            dynatempRange = 0.0;
+            dynatempExponent = 1.0;
+            xtcProbability = 0.0;
+            xtcThreshold = 0.1;
+            topNSigma = -1.0;
+            
+            // DRY parameters defaults
+            dryMultiplier = 0.0;
+            dryBase = 1.75;
+            dryAllowedLength = 2;
+            dryPenaltyLastN = -1;
+            drySequenceBreakers = DEFAULT_DRY_SEQUENCE_BREAKERS;
         }
         
         public Configuration(String name) {
@@ -62,6 +119,34 @@ public class ConfigurationManager {
             json.put("topP", topP);
             json.put("topK", topK);
             json.put("promptTemplate", promptTemplate);
+            
+            // Penalty parameters
+            json.put("penaltyLastN", penaltyLastN);
+            json.put("penaltyRepeat", penaltyRepeat);
+            json.put("penaltyFreq", penaltyFreq);
+            json.put("penaltyPresent", penaltyPresent);
+            
+            // Mirostat parameters
+            json.put("mirostat", mirostat);
+            json.put("mirostatTau", mirostatTau);
+            json.put("mirostatEta", mirostatEta);
+            
+            // Additional sampling parameters
+            json.put("minP", minP);
+            json.put("typicalP", typicalP);
+            json.put("dynatempRange", dynatempRange);
+            json.put("dynatempExponent", dynatempExponent);
+            json.put("xtcProbability", xtcProbability);
+            json.put("xtcThreshold", xtcThreshold);
+            json.put("topNSigma", topNSigma);
+            
+            // DRY parameters
+            json.put("dryMultiplier", dryMultiplier);
+            json.put("dryBase", dryBase);
+            json.put("dryAllowedLength", dryAllowedLength);
+            json.put("dryPenaltyLastN", dryPenaltyLastN);
+            json.put("drySequenceBreakers", drySequenceBreakers);
+            
             return json;
         }
         
@@ -76,6 +161,34 @@ public class ConfigurationManager {
             config.topP = json.getDouble("topP");
             config.topK = json.getInt("topK");
             config.promptTemplate = json.getString("promptTemplate");
+            
+            // Penalty parameters (with defaults for backward compatibility)
+            config.penaltyLastN = json.optInt("penaltyLastN", 64);
+            config.penaltyRepeat = json.optDouble("penaltyRepeat", 1.0);
+            config.penaltyFreq = json.optDouble("penaltyFreq", 0.0);
+            config.penaltyPresent = json.optDouble("penaltyPresent", 0.0);
+            
+            // Mirostat parameters (with defaults for backward compatibility)
+            config.mirostat = json.optInt("mirostat", 0);
+            config.mirostatTau = json.optDouble("mirostatTau", 5.0);
+            config.mirostatEta = json.optDouble("mirostatEta", 0.1);
+            
+            // Additional sampling parameters (with defaults for backward compatibility)
+            config.minP = json.optDouble("minP", 0.05);
+            config.typicalP = json.optDouble("typicalP", 1.0);
+            config.dynatempRange = json.optDouble("dynatempRange", 0.0);
+            config.dynatempExponent = json.optDouble("dynatempExponent", 1.0);
+            config.xtcProbability = json.optDouble("xtcProbability", 0.0);
+            config.xtcThreshold = json.optDouble("xtcThreshold", 0.1);
+            config.topNSigma = json.optDouble("topNSigma", -1.0);
+            
+            // DRY parameters (with defaults for backward compatibility)
+            config.dryMultiplier = json.optDouble("dryMultiplier", 0.0);
+            config.dryBase = json.optDouble("dryBase", 1.75);
+            config.dryAllowedLength = json.optInt("dryAllowedLength", 2);
+            config.dryPenaltyLastN = json.optInt("dryPenaltyLastN", -1);
+            config.drySequenceBreakers = json.optString("drySequenceBreakers", DEFAULT_DRY_SEQUENCE_BREAKERS);
+            
             return config;
         }
     }

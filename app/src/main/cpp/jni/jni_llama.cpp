@@ -41,6 +41,36 @@ static float g_temp       = 0.7f;
 static float g_top_p      = 0.9f;
 static int   g_top_k      = 40;
 
+// DRY sequence breakers default - MUST match Java ConfigurationManager.Configuration.DEFAULT_DRY_SEQUENCE_BREAKERS
+static const char* DEFAULT_DRY_SEQUENCE_BREAKERS = "\\n,:,\",*";
+
+// Penalty parameters
+static int   g_penalty_last_n    = 64;
+static float g_penalty_repeat    = 1.0f;
+static float g_penalty_freq      = 0.0f;
+static float g_penalty_present   = 0.0f;
+
+// Mirostat parameters
+static int   g_mirostat          = 0;
+static float g_mirostat_tau      = 5.0f;
+static float g_mirostat_eta      = 0.1f;
+
+// Additional sampler parameters
+static float g_min_p             = 0.05f;
+static float g_typical_p         = 1.0f;
+static float g_dynatemp_range    = 0.0f;
+static float g_dynatemp_exponent = 1.0f;
+static float g_xtc_probability   = 0.0f;
+static float g_xtc_threshold     = 0.1f;
+static float g_top_n_sigma       = -1.0f;
+
+// DRY parameters
+static float g_dry_multiplier       = 0.0f;
+static float g_dry_base             = 1.75f;
+static int   g_dry_allowed_length   = 2;
+static int   g_dry_penalty_last_n   = -1;
+static std::string g_dry_sequence_breakers = DEFAULT_DRY_SEQUENCE_BREAKERS;
+
 // ---------------- ログユーティリティ ----------------
 static std::string current_time_str() {
     using namespace std::chrono;
@@ -84,6 +114,27 @@ static std::string jstring_to_std(JNIEnv *env, jstring jstr) {
 static void throw_java_exception(JNIEnv *env, const char *msg) {
     jclass exClass = env->FindClass("java/lang/RuntimeException");
     if (exClass) env->ThrowNew(exClass, msg);
+}
+
+// Helper function to process escape sequences in a string
+// Converts user-friendly escape sequences like "\n" (backslash+n) to actual characters (newline)
+static std::string process_escape_sequences(const std::string& input) {
+    std::string result;
+    for (size_t i = 0; i < input.size(); ++i) {
+        if (input[i] == '\\' && i + 1 < input.size()) {
+            switch (input[i + 1]) {
+                case 'n': result += '\n'; i++; break;
+                case 't': result += '\t'; i++; break;
+                case 'r': result += '\r'; i++; break;
+                case '\\': result += '\\'; i++; break;
+                case '"': result += '"'; i++; break;
+                default: result += input[i]; break;
+            }
+        } else {
+            result += input[i];
+        }
+    }
+    return result;
 }
 
 // ---------------- download() 用 ----------------
@@ -443,6 +494,74 @@ Java_com_example_ollama_LlamaNative_init(
     return env->NewStringUTF("ok");
 }
 
+// ---------------- JNI: setParameters ----------------
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_example_ollama_LlamaNative_setParameters(
+        JNIEnv *env, jobject,
+        jint penaltyLastN, jfloat penaltyRepeat, jfloat penaltyFreq, jfloat penaltyPresent,
+        jint mirostat, jfloat mirostatTau, jfloat mirostatEta,
+        jfloat minP, jfloat typicalP,
+        jfloat dynatempRange, jfloat dynatempExponent,
+        jfloat xtcProbability, jfloat xtcThreshold,
+        jfloat topNSigma,
+        jfloat dryMultiplier, jfloat dryBase, jint dryAllowedLength, jint dryPenaltyLastN,
+        jstring jDrySequenceBreakers
+) {
+    std::lock_guard<std::mutex> lock(g_mutex);
+    
+    // Penalty parameters
+    g_penalty_last_n = penaltyLastN;
+    g_penalty_repeat = penaltyRepeat;
+    g_penalty_freq = penaltyFreq;
+    g_penalty_present = penaltyPresent;
+    
+    // Mirostat parameters
+    g_mirostat = mirostat;
+    g_mirostat_tau = mirostatTau;
+    g_mirostat_eta = mirostatEta;
+    
+    // Additional sampler parameters
+    g_min_p = minP;
+    g_typical_p = typicalP;
+    g_dynatemp_range = dynatempRange;
+    g_dynatemp_exponent = dynatempExponent;
+    g_xtc_probability = xtcProbability;
+    g_xtc_threshold = xtcThreshold;
+    g_top_n_sigma = topNSigma;
+    
+    // DRY parameters
+    g_dry_multiplier = dryMultiplier;
+    g_dry_base = dryBase;
+    g_dry_allowed_length = dryAllowedLength;
+    g_dry_penalty_last_n = dryPenaltyLastN;
+    g_dry_sequence_breakers = jstring_to_std(env, jDrySequenceBreakers);
+    
+    {
+        std::ostringstream ss;
+        ss << "setParameters: penalty_last_n=" << g_penalty_last_n
+           << " penalty_repeat=" << g_penalty_repeat
+           << " penalty_freq=" << g_penalty_freq
+           << " penalty_present=" << g_penalty_present
+           << " mirostat=" << g_mirostat
+           << " mirostat_tau=" << g_mirostat_tau
+           << " mirostat_eta=" << g_mirostat_eta
+           << " min_p=" << g_min_p
+           << " typical_p=" << g_typical_p
+           << " dynatemp_range=" << g_dynatemp_range
+           << " dynatemp_exponent=" << g_dynatemp_exponent
+           << " xtc_probability=" << g_xtc_probability
+           << " xtc_threshold=" << g_xtc_threshold
+           << " top_n_sigma=" << g_top_n_sigma
+           << " dry_multiplier=" << g_dry_multiplier
+           << " dry_base=" << g_dry_base
+           << " dry_allowed_length=" << g_dry_allowed_length
+           << " dry_penalty_last_n=" << g_dry_penalty_last_n
+           << " dry_sequence_breakers=\"" << g_dry_sequence_breakers << "\"";
+        log_to_file(ss.str());
+    }
+}
+
 // ---------------- JNI: generate ----------------
 extern "C"
 JNIEXPORT jstring JNICALL
@@ -517,12 +636,116 @@ Java_com_example_ollama_LlamaNative_generate(
 
     const int n_vocab = llama_vocab_n_tokens(vocab);
     
+    // Build sampler chain based on parameters
     auto sparams = llama_sampler_chain_default_params();
     llama_sampler * smpl = llama_sampler_chain_init(sparams);
-    llama_sampler_chain_add(smpl, llama_sampler_init_top_k(g_top_k));
-    llama_sampler_chain_add(smpl, llama_sampler_init_top_p(g_top_p, 1));
-    llama_sampler_chain_add(smpl, llama_sampler_init_temp(g_temp));
-    llama_sampler_chain_add(smpl, llama_sampler_init_dist(LLAMA_DEFAULT_SEED));
+    
+    // 1. Add penalties sampler (if enabled)
+    if (g_penalty_last_n > 0 && (g_penalty_repeat != 1.0f || g_penalty_freq != 0.0f || g_penalty_present != 0.0f)) {
+        llama_sampler_chain_add(smpl, llama_sampler_init_penalties(
+            g_penalty_last_n, g_penalty_repeat, g_penalty_freq, g_penalty_present));
+        log_to_file("generate: added penalties sampler");
+    }
+    
+    // 2. Add DRY sampler (if enabled)
+    if (g_dry_multiplier > 0.0f) {
+        // Parse comma-separated sequence breakers with escape sequence support
+        // Users input escape sequences like "\n" (two characters: backslash + n)
+        // We need to convert them to actual characters (one character: newline)
+        std::vector<std::string> breaker_strings;
+        std::vector<const char*> breaker_ptrs;
+        
+        std::string temp = g_dry_sequence_breakers;
+        size_t pos = 0;
+        while ((pos = temp.find(',')) != std::string::npos) {
+            std::string token = temp.substr(0, pos);
+            if (!token.empty()) {
+                breaker_strings.push_back(process_escape_sequences(token));
+            }
+            temp.erase(0, pos + 1);
+        }
+        // Don't forget the last token
+        if (!temp.empty()) {
+            breaker_strings.push_back(process_escape_sequences(temp));
+        }
+        
+        // Convert to const char* array
+        for (const auto& s : breaker_strings) {
+            breaker_ptrs.push_back(s.c_str());
+        }
+        
+        if (!breaker_ptrs.empty()) {
+            llama_sampler_chain_add(smpl, llama_sampler_init_dry(
+                vocab, g_n_ctx, g_dry_multiplier, g_dry_base, 
+                g_dry_allowed_length, g_dry_penalty_last_n, 
+                breaker_ptrs.data(), breaker_ptrs.size()));
+            
+            std::ostringstream ss;
+            ss << "generate: added DRY sampler with " << breaker_ptrs.size() << " breakers";
+            log_to_file(ss.str());
+        }
+    }
+    
+    // 3. Add top-n-sigma (if enabled)
+    if (g_top_n_sigma > 0.0f) {
+        llama_sampler_chain_add(smpl, llama_sampler_init_top_n_sigma(g_top_n_sigma));
+        log_to_file("generate: added top-n-sigma sampler");
+    }
+    
+    // 4. Add top-k (if enabled)
+    if (g_top_k > 0) {
+        llama_sampler_chain_add(smpl, llama_sampler_init_top_k(g_top_k));
+        log_to_file("generate: added top-k sampler");
+    }
+    
+    // 5. Add typical-p (if enabled)
+    if (g_typical_p < 1.0f) {
+        llama_sampler_chain_add(smpl, llama_sampler_init_typical(g_typical_p, 1));
+        log_to_file("generate: added typical-p sampler");
+    }
+    
+    // 6. Add top-p (if enabled)
+    if (g_top_p < 1.0f) {
+        llama_sampler_chain_add(smpl, llama_sampler_init_top_p(g_top_p, 1));
+        log_to_file("generate: added top-p sampler");
+    }
+    
+    // 7. Add min-p (if enabled)
+    if (g_min_p > 0.0f) {
+        llama_sampler_chain_add(smpl, llama_sampler_init_min_p(g_min_p, 1));
+        log_to_file("generate: added min-p sampler");
+    }
+    
+    // 8. Add XTC (if enabled)
+    if (g_xtc_probability > 0.0f) {
+        llama_sampler_chain_add(smpl, llama_sampler_init_xtc(
+            g_xtc_probability, g_xtc_threshold, 1, LLAMA_DEFAULT_SEED));
+        log_to_file("generate: added XTC sampler");
+    }
+    
+    // 9. Add temperature sampler
+    if (g_dynatemp_range > 0.0f) {
+        llama_sampler_chain_add(smpl, llama_sampler_init_temp_ext(
+            g_temp, g_dynatemp_range, g_dynatemp_exponent));
+        log_to_file("generate: added dynamic temperature sampler");
+    } else {
+        llama_sampler_chain_add(smpl, llama_sampler_init_temp(g_temp));
+        log_to_file("generate: added temperature sampler");
+    }
+    
+    // 10. Add mirostat or distribution sampler
+    if (g_mirostat == 1) {
+        llama_sampler_chain_add(smpl, llama_sampler_init_mirostat(
+            n_vocab, LLAMA_DEFAULT_SEED, g_mirostat_tau, g_mirostat_eta, 100));
+        log_to_file("generate: added mirostat v1 sampler");
+    } else if (g_mirostat == 2) {
+        llama_sampler_chain_add(smpl, llama_sampler_init_mirostat_v2(
+            LLAMA_DEFAULT_SEED, g_mirostat_tau, g_mirostat_eta));
+        log_to_file("generate: added mirostat v2 sampler");
+    } else {
+        llama_sampler_chain_add(smpl, llama_sampler_init_dist(LLAMA_DEFAULT_SEED));
+        log_to_file("generate: added distribution sampler");
+    }
 
     log_to_file("generate: sampler chain initialized");
 

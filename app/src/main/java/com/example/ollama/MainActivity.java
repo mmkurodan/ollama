@@ -112,6 +112,36 @@ public class MainActivity extends Activity {
                 return;
             }
 
+            // Set parameters before generating
+            if (currentConfig != null) {
+                try {
+                    llama.setParameters(
+                        currentConfig.penaltyLastN,
+                        (float)currentConfig.penaltyRepeat,
+                        (float)currentConfig.penaltyFreq,
+                        (float)currentConfig.penaltyPresent,
+                        currentConfig.mirostat,
+                        (float)currentConfig.mirostatTau,
+                        (float)currentConfig.mirostatEta,
+                        (float)currentConfig.minP,
+                        (float)currentConfig.typicalP,
+                        (float)currentConfig.dynatempRange,
+                        (float)currentConfig.dynatempExponent,
+                        (float)currentConfig.xtcProbability,
+                        (float)currentConfig.xtcThreshold,
+                        (float)currentConfig.topNSigma,
+                        (float)currentConfig.dryMultiplier,
+                        (float)currentConfig.dryBase,
+                        currentConfig.dryAllowedLength,
+                        currentConfig.dryPenaltyLastN,
+                        currentConfig.drySequenceBreakers
+                    );
+                } catch (Throwable t) {
+                    Log.e(TAG, "Failed to set parameters", t);
+                    appendMessage("Warning: Failed to set parameters: " + t.getMessage());
+                }
+            }
+
             // Apply prompt template
             final String chatPrompt = applyPromptTemplate(userPrompt);
 

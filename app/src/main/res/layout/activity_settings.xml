@@ -231,6 +231,336 @@
             android:layout_marginTop="16dp"
             android:layout_marginBottom="16dp" />
 
+        <!-- Penalty Parameters Section -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Penalty Parameters"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:paddingBottom="8dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Penalty Last N:" />
+
+        <EditText
+            android:id="@+id/penaltyLastNInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Default: 64"
+            android:inputType="number"
+            android:text="64" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Penalty Repeat:"
+            android:paddingTop="8dp" />
+
+        <EditText
+            android:id="@+id/penaltyRepeatInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Default: 1.0"
+            android:inputType="numberDecimal"
+            android:text="1.0" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Penalty Frequency:"
+            android:paddingTop="8dp" />
+
+        <EditText
+            android:id="@+id/penaltyFreqInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Default: 0.0"
+            android:inputType="numberDecimal"
+            android:text="0.0" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Penalty Presence:"
+            android:paddingTop="8dp" />
+
+        <EditText
+            android:id="@+id/penaltyPresentInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Default: 0.0"
+            android:inputType="numberDecimal"
+            android:text="0.0" />
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#CCCCCC"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Mirostat Parameters Section -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Mirostat Parameters"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:paddingBottom="8dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Mirostat (0=disabled, 1=v1, 2=v2):" />
+
+        <EditText
+            android:id="@+id/mirostatInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Default: 0"
+            android:inputType="number"
+            android:text="0" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Mirostat Tau:"
+            android:paddingTop="8dp" />
+
+        <EditText
+            android:id="@+id/mirostatTauInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Default: 5.0"
+            android:inputType="numberDecimal"
+            android:text="5.0" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Mirostat Eta:"
+            android:paddingTop="8dp" />
+
+        <EditText
+            android:id="@+id/mirostatEtaInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Default: 0.1"
+            android:inputType="numberDecimal"
+            android:text="0.1" />
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#CCCCCC"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Additional Sampling Parameters Section -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Additional Sampling Parameters"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:paddingBottom="8dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Min-p:" />
+
+        <EditText
+            android:id="@+id/minPInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Default: 0.05"
+            android:inputType="numberDecimal"
+            android:text="0.05" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Typical P:"
+            android:paddingTop="8dp" />
+
+        <EditText
+            android:id="@+id/typicalPInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Default: 1.0"
+            android:inputType="numberDecimal"
+            android:text="1.0" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Dynamic Temperature Range:"
+            android:paddingTop="8dp" />
+
+        <EditText
+            android:id="@+id/dynatempRangeInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Default: 0.0"
+            android:inputType="numberDecimal"
+            android:text="0.0" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Dynamic Temperature Exponent:"
+            android:paddingTop="8dp" />
+
+        <EditText
+            android:id="@+id/dynatempExponentInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Default: 1.0"
+            android:inputType="numberDecimal"
+            android:text="1.0" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="XTC Probability:"
+            android:paddingTop="8dp" />
+
+        <EditText
+            android:id="@+id/xtcProbabilityInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Default: 0.0"
+            android:inputType="numberDecimal"
+            android:text="0.0" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="XTC Threshold:"
+            android:paddingTop="8dp" />
+
+        <EditText
+            android:id="@+id/xtcThresholdInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Default: 0.1"
+            android:inputType="numberDecimal"
+            android:text="0.1" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Top-N-Sigma:"
+            android:paddingTop="8dp" />
+
+        <EditText
+            android:id="@+id/topNSigmaInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Default: -1.0"
+            android:inputType="numberDecimal|numberSigned"
+            android:text="-1.0" />
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#CCCCCC"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- DRY Parameters Section -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="DRY (Don't Repeat Yourself) Parameters"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:paddingBottom="8dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="DRY Multiplier:" />
+
+        <EditText
+            android:id="@+id/dryMultiplierInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Default: 0.0"
+            android:inputType="numberDecimal"
+            android:text="0.0" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="DRY Base:"
+            android:paddingTop="8dp" />
+
+        <EditText
+            android:id="@+id/dryBaseInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Default: 1.75"
+            android:inputType="numberDecimal"
+            android:text="1.75" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="DRY Allowed Length:"
+            android:paddingTop="8dp" />
+
+        <EditText
+            android:id="@+id/dryAllowedLengthInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Default: 2"
+            android:inputType="number"
+            android:text="2" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="DRY Penalty Last N:"
+            android:paddingTop="8dp" />
+
+        <EditText
+            android:id="@+id/dryPenaltyLastNInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Default: -1"
+            android:inputType="number|numberSigned"
+            android:text="-1" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="DRY Sequence Breakers:"
+            android:paddingTop="8dp" />
+
+        <EditText
+            android:id="@+id/drySequenceBreakersInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Default: \n,:,&quot;,*"
+            android:inputType="text"
+            android:text="\n,:,&quot;,*" />
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#CCCCCC"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp" />
+
         <!-- Prompt Template Section -->
         <TextView
             android:layout_width="match_parent"
