@@ -85,6 +85,7 @@ public class SettingsActivity extends Activity {
     private static final int BUSY_QUEUE_WAIT_MAX_SECONDS = 600;
     private static final int REQUEST_IMPORT_MODEL_LOCAL_DEVICE = 1001;
     private static final int REQUEST_RESTORE_DIR = 1002;
+    private static final int REQUEST_IMPORT_LORA_ADAPTER = 1003;
     private static final int MODEL_COPY_BUFFER_SIZE = 1024 * 1024;
     private static final String IMPORT_TEMP_SUFFIX = ".import.tmp";
     
@@ -97,6 +98,9 @@ public class SettingsActivity extends Activity {
     private TextView multimodalProjectorInfo;
     private Button selectProjectorButton;
     private Button clearProjectorButton;
+    private Button applyLoraButton;
+    private Button clearLoraButton;
+    private TextView loraAdapterInfo;
     private Button mtpModelButton;
     private Switch mtpEnableToggle;
     private EditText mtpNDraftInput;
@@ -314,6 +318,9 @@ public class SettingsActivity extends Activity {
         multimodalProjectorInfo = findViewById(R.id.multimodalProjectorInfo);
         selectProjectorButton = findViewById(R.id.selectProjectorButton);
         clearProjectorButton = findViewById(R.id.clearProjectorButton);
+        applyLoraButton = findViewById(R.id.applyLoraButton);
+        clearLoraButton = findViewById(R.id.clearLoraButton);
+        loraAdapterInfo = findViewById(R.id.loraAdapterInfo);
         mtpModelButton = findViewById(R.id.mtpModelButton);
         mtpEnableToggle = findViewById(R.id.mtpEnableToggle);
         mtpNDraftInput = findViewById(R.id.mtpNDraftInput);
@@ -629,6 +636,18 @@ public class SettingsActivity extends Activity {
             // Explicit user intent to disable vision: suppress mmproj auto-discovery too.
             selectedProjectorDisabled = true;
             setSelectedProjectorReference("", false);
+        });
+        applyLoraButton.setOnClickListener(v -> {
+            if (isBusyActionBlocked()) {
+                return;
+            }
+            launchGgufPicker(REQUEST_IMPORT_LORA_ADAPTER, buildDefaultImportUri());
+        });
+        clearLoraButton.setOnClickListener(v -> {
+            if (isBusyActionBlocked()) {
+                return;
+            }
+            clearLoraAdapter();
         });
         // ---- MTP (experimental) controls. The values live in the per-model config
         //      (updateUIFromConfig loads them, collectConfiguration saves them); here we only
@@ -3991,6 +4010,19 @@ public class SettingsActivity extends Activity {
             return;
         }
 
+        if (requestCode == REQUEST_IMPORT_LORA_ADAPTER) {
+            if (resultCode != RESULT_OK) {
+                return;
+            }
+            Uri loraUri = data != null ? data.getData() : null;
+            if (loraUri == null) {
+                showToast(localizedText("選択したファイルを開けません", "Could not open the selected file"));
+                return;
+            }
+            importAndApplyLoraAdapter(loraUri);
+            return;
+        }
+
         if (requestCode != REQUEST_IMPORT_MODEL_LOCAL_DEVICE || resultCode != RESULT_OK) {
             return;
         }
@@ -4012,6 +4044,103 @@ public class SettingsActivity extends Activity {
         }
 
         importModelFromUri(selectedUri);
+    }
+
+    // ---- LoRA アダプタ適用 ----------------------------------------------------
+
+    /** 選択されたアダプタGGUFをアプリ領域へコピーし、スケールを尋ねてから適用する。
+     *  ネイティブは実ファイルパスで開くため、SAF Uri は一旦コピーが必要。 */
+    private void importAndApplyLoraAdapter(Uri sourceUri) {
+        if (!modelLoadedSuccessfully) {
+            showToast(localizedText("先にモデルを読み込んでください", "Load a model first"));
+            return;
+        }
+        String displayName = resolveImportedModelCandidate(sourceUri).displayName;
+        final String name = (displayName != null && ModelFileHelper.isGgufFilename(displayName))
+                ? displayName
+                : ((displayName != null && !displayName.isEmpty() ? displayName : "adapter") + ".gguf");
+
+        // スケール入力ダイアログ（既定 1.0）
+        final EditText scaleInput = new EditText(this);
+        scaleInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        scaleInput.setText("1.0");
+        new AlertDialog.Builder(this)
+                .setTitle(localizedText("LoRA スケール", "LoRA scale"))
+                .setMessage(localizedText("適用強度（通常 1.0）", "Effective strength (usually 1.0)"))
+                .setView(scaleInput)
+                .setPositiveButton(localizedText("適用", "Apply"), (d, w) -> {
+                    float scale;
+                    try { scale = Float.parseFloat(scaleInput.getText().toString().trim()); }
+                    catch (Exception e) { scale = 1.0f; }
+                    doImportAndApplyLora(sourceUri, name, scale);
+                })
+                .setNegativeButton(localizedText("キャンセル", "Cancel"), null)
+                .show();
+    }
+
+    private void doImportAndApplyLora(Uri sourceUri, String name, float scale) {
+        runOnUiThread(() -> {
+            loraAdapterInfo.setText(localizedText("アダプタ取込中... ", "Importing adapter... ") + name);
+            applyLoraButton.setEnabled(false);
+        });
+        new Thread(() -> {
+            String error = null;
+            String destPath = null;
+            try {
+                File dir = new File(getFilesDir(), "adapters");
+                if (!dir.exists()) dir.mkdirs();
+                File dest = new File(dir, name);
+                try (java.io.InputStream in = getContentResolver().openInputStream(sourceUri);
+                     java.io.OutputStream out = new java.io.FileOutputStream(dest)) {
+                    if (in == null) throw new java.io.IOException("openInputStream=null");
+                    byte[] buf = new byte[MODEL_COPY_BUFFER_SIZE];
+                    int n;
+                    while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                }
+                destPath = dest.getAbsolutePath();
+                if (!modelManager.tryAcquire()) {
+                    error = localizedText("モデルは処理中です", "Model is busy");
+                } else {
+                    try {
+                        error = modelManager.getLlama().applyLoraAdapter(destPath, scale);
+                    } finally {
+                        modelManager.release();
+                    }
+                }
+            } catch (Throwable t) {
+                error = t.getMessage();
+            }
+            final String fError = error;
+            final float fScale = scale;
+            final String fName = name;
+            runOnUiThread(() -> {
+                applyLoraButton.setEnabled(true);
+                if (fError == null || fError.isEmpty()) {
+                    loraAdapterInfo.setText(localizedText("適用中: ", "Applied: ") + fName
+                            + "  (scale=" + fScale + ")");
+                    showToast(localizedText("LoRAアダプタを適用しました", "LoRA adapter applied"));
+                } else {
+                    loraAdapterInfo.setText(localizedText("適用失敗: ", "Apply failed: ") + fError);
+                    showToast(localizedText("LoRA適用失敗: ", "LoRA apply failed: ") + fError);
+                }
+            });
+        }).start();
+    }
+
+    private void clearLoraAdapter() {
+        new Thread(() -> {
+            boolean acquired = modelManager.tryAcquire();
+            try {
+                if (acquired) modelManager.getLlama().clearLoraAdapter();
+            } catch (Throwable ignored) {
+            } finally {
+                if (acquired) modelManager.release();
+            }
+            runOnUiThread(() -> {
+                loraAdapterInfo.setText(localizedText("LoRA アダプタ未適用", "No LoRA adapter"));
+                showToast(localizedText("LoRAアダプタを解除しました", "LoRA adapter cleared"));
+            });
+        }).start();
     }
 
     @Override

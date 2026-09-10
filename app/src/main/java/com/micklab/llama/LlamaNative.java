@@ -87,6 +87,14 @@ public class LlamaNative {
     // that mmap needs. Applied at the next model init/initWithMmproj.
     public native void setUseMmap(boolean useMmap);
 
+    // LoRA アダプタ（別ファイルのアダプタGGUF）を現在のモデル/コンテキストへ適用する。
+    // 戻り値: 成功="", 失敗=エラーメッセージ。scale は実効強度（通常 1.0）。
+    public native String applyLoraAdapter(String adapterPath, float scale);
+    // 適用中の LoRA アダプタを外して解放する。未適用なら何もしない。
+    public native void clearLoraAdapter();
+    // 適用中アダプタ情報 "path\tscale"（未適用は ""）。UI 表示用。
+    public native String getLoraAdapterInfo();
+
     // Token listener registration (native will keep a global ref)
     public native void setTokenListener(TokenListener listener);
 

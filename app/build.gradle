@@ -10,16 +10,19 @@ android {
         buildConfig true
     }
 
+    // 版付: release更新のため単調増加。分単位UNIXエポック(int32安全, 旧Actions番号より必ず大)。
+    // ローカル(build-local.sh)/CI 共通で機能。VERSION_CODE/VERSION_NAME env で上書き可。
+    // 旧: versionName "1.${GITHUB_RUN_NUMBER}" は廃止（ローカルビルドで番号が付かず更新不可のため）。
+    def verCode = System.getenv("VERSION_CODE") ? System.getenv("VERSION_CODE").toInteger() : ((System.currentTimeMillis() / 60000L) as int)
+    def verName = System.getenv("VERSION_NAME") ?: new java.text.SimpleDateFormat("yyyy.MM.dd.HHmm").format(new java.util.Date())
+
     defaultConfig {
         applicationId "com.micklab.llama"
         minSdk 24
         targetSdk 36
 
-        // ★ GitHub Actions のビルド番号を versionCode に自動反映
-        versionCode System.getenv("GITHUB_RUN_NUMBER")?.toInteger() ?: 1
-
-        // ★ versionName も同じロジックで自動化
-        versionName "1.${System.getenv("GITHUB_RUN_NUMBER") ?: "0"}"
+        versionCode verCode
+        versionName verName
 
         ndk {
             abiFilters "arm64-v8a"

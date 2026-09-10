@@ -160,6 +160,43 @@
                 android:text="Clear mmproj" />
         </LinearLayout>
 
+        <!-- LoRA adapter (適用中モデルへ別ファイルのLoRAアダプタGGUFを重ねる) -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="LoRA アダプタ:"
+            android:paddingTop="8dp" />
+
+        <TextView
+            android:id="@+id/loraAdapterInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="LoRA アダプタ未適用（モデル読込後に適用可）"
+            android:paddingTop="4dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingTop="4dp">
+
+            <Button
+                style="@style/SecondaryButton" android:id="@+id/applyLoraButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:text="アダプタ適用" />
+
+            <Button
+                style="@style/SecondaryButton" android:id="@+id/clearLoraButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:text="アダプタ解除" />
+        </LinearLayout>
+
         <!-- Model Management Section -->
         <TextView
             android:id="@+id/modelManagementHeader"
